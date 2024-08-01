@@ -14,6 +14,7 @@ from statsmodels.formula.api import ols
 import pandas as pd
 from scipy import stats
 from scipy.stats import t
+from scipy.special import gammaln
 import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
@@ -811,7 +812,7 @@ def coeffs_diff_plot(metric_function, metric_name, data, updrs_conf, sheets, res
     return 0
 
 
-def create_stats_table(dataO, results_folder, analysis_name, sheets):
+def create_stats_table(dataO, results_folder, analysis_name, sheets, percentageChangeFunction=percentage_change_Elble):
     database = copy.deepcopy(dataO)
     Path(os.path.join(results_folder, analysis_name)).mkdir(parents=True, exist_ok=True)
     stats_table = dict()
@@ -873,14 +874,14 @@ def create_stats_table(dataO, results_folder, analysis_name, sheets):
         stats_table["HandsTremorFiltered"][sheet] = [totalsU3_F, brady_F, rigi_F, tremor_F]
 
         if i in [1, 3, 5]:
-            pcU3_C = create_string_mean_std(percentage_change_Elble(database[sheets[i]]["TotalU3"], database[sheets[i-1]]["TotalU3"], alpha=0.5))
-            pcU3_F = create_string_mean_std(percentage_change_Elble(handsTremorFiltered[sheets[i]]["TotalU3"], handsTremorFiltered[sheets[i-1]]["TotalU3"], alpha=0.5))
-            pcBrady_C = create_string_mean_std(percentage_change_Elble(database[sheets[i]]["Brady14Items"], database[sheets[i - 1]]["Brady14Items"], alpha=0.5))
-            pcBrady_F = create_string_mean_std(percentage_change_Elble(handsTremorFiltered[sheets[i]]["Brady14Items"], handsTremorFiltered[sheets[i - 1]]["Brady14Items"], alpha=0.5))
-            pcRigi_C = create_string_mean_std(percentage_change_Elble(database[sheets[i]]["LimbsRigidity5Items"], database[sheets[i - 1]]["LimbsRigidity5Items"], alpha=0.5))
-            pcRigi_F = create_string_mean_std(percentage_change_Elble(handsTremorFiltered[sheets[i]]["LimbsRigidity5Items"], handsTremorFiltered[sheets[i - 1]]["LimbsRigidity5Items"], alpha=0.5))
-            pcTremor_C = create_string_mean_std(percentage_change_Elble(database[sheets[i]]["LimbsRestTrem"], database[sheets[i - 1]]["LimbsRestTrem"], alpha=0.5))
-            pcTremor_F = create_string_mean_std(percentage_change_Elble(handsTremorFiltered[sheets[i]]["LimbsRestTrem"], handsTremorFiltered[sheets[i - 1]]["LimbsRestTrem"], alpha=0.5))
+            pcU3_C = create_string_mean_std(percentageChangeFunction(database[sheets[i]]["TotalU3"], database[sheets[i-1]]["TotalU3"], alpha=0.5))
+            pcU3_F = create_string_mean_std(percentageChangeFunction(handsTremorFiltered[sheets[i]]["TotalU3"], handsTremorFiltered[sheets[i-1]]["TotalU3"], alpha=0.5))
+            pcBrady_C = create_string_mean_std(percentageChangeFunction(database[sheets[i]]["Brady14Items"], database[sheets[i - 1]]["Brady14Items"], alpha=0.5))
+            pcBrady_F = create_string_mean_std(percentageChangeFunction(handsTremorFiltered[sheets[i]]["Brady14Items"], handsTremorFiltered[sheets[i - 1]]["Brady14Items"], alpha=0.5))
+            pcRigi_C = create_string_mean_std(percentageChangeFunction(database[sheets[i]]["LimbsRigidity5Items"], database[sheets[i - 1]]["LimbsRigidity5Items"], alpha=0.5))
+            pcRigi_F = create_string_mean_std(percentageChangeFunction(handsTremorFiltered[sheets[i]]["LimbsRigidity5Items"], handsTremorFiltered[sheets[i - 1]]["LimbsRigidity5Items"], alpha=0.5))
+            pcTremor_C = create_string_mean_std(percentageChangeFunction(database[sheets[i]]["LimbsRestTrem"], database[sheets[i - 1]]["LimbsRestTrem"], alpha=0.5))
+            pcTremor_F = create_string_mean_std(percentageChangeFunction(handsTremorFiltered[sheets[i]]["LimbsRestTrem"], handsTremorFiltered[sheets[i - 1]]["LimbsRestTrem"], alpha=0.5))
             stats_table["Complete97(No-NaNs)"][f"% Change {i}"] = [pcU3_C, pcBrady_C, pcRigi_C, pcTremor_C]
             stats_table["HandsTremorFiltered"][f"% Change {i}"] = [pcU3_F, pcBrady_F, pcRigi_F, pcTremor_F]
 
@@ -975,7 +976,16 @@ def cohens_d(data1, data2):
     dof = n1 + n2 - 2
     std_pooled = np.sqrt((((n1 - 1)*(np.std(data1)**2))+((n2 - 1)*(np.std(data2)**2))) / dof)
     d = abs(np.mean(data1) - np.mean(data2)) / std_pooled
-    return d
+    J = hedges_correction(dof)
+    return J*d
+
+
+def hedges_correction(df):
+    if df == 0:
+        return np.nan
+    else:
+        J = np.exp(gammaln(df / 2) - np.log(np.sqrt(df / 2)) - gammaln((df - 1) / 2))
+        return J
 
 
 def create_string_cohen_d_ci(data1, data2):
@@ -1132,7 +1142,7 @@ if __name__ == "__main__":
     plot_raincloud_flag = False
     plot_pdf_flag = False
     plot_coeffs_diff_flag = False
-    create_stats_table_flag = False
+    create_stats_table_flag = True
     plot_single_sub_trends_flag = False
 
     """ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
@@ -1256,12 +1266,7 @@ if __name__ == "__main__":
     if create_stats_table_flag:
         if run_local: print("----- CREATING TABLE WITH STATS SUMMARY PPP -----")
         analysis_name = "stats_summary"
-        updrs_conf_ppp = [
-            {'updrs': [{'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'}], 'visit': [1, 2, 3], 'ses': ['off', 'on']},
-            {'updrs': [{'off': 'AvgBrady14Items', 'on': 'AvgBrady14Items'}, {'off': 'AvgTotalU3', 'on': 'AvgTotalU3'}], 'visit': [1, 2], 'ses': ['off', 'on']}
-        ]
-
-        create_stats_table(ppp_database, results_folder_ppp, analysis_name, sheets_ppp)
+        create_stats_table(ppp_database, results_folder_ppp, analysis_name, sheets_ppp, percentageChangeFunction=percentage_change_Basic)
 
     """ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
     if plot_single_sub_trends_flag:
