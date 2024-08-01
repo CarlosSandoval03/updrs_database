@@ -19,6 +19,7 @@ def clean_nan_rows(database, columns):
 
 def reduce_db_to_consistent_subjects(database, sheets):
     database_onoff = copy.deepcopy(database)
+    database_visits = copy.deepcopy(database)
 
     # for sheet_name, data in database.items():
         # Delete any row that has at least one nan
@@ -48,9 +49,27 @@ def reduce_db_to_consistent_subjects(database, sheets):
         set(database[sheets[4]]['Subject']),
     ]
 
+    sets_of_ids_v1 = [
+        set(database[sheets[0]]['Subject']),
+        set(database[sheets[1]]['Subject']),
+    ]
+
+    sets_of_ids_v2 = [
+        set(database[sheets[2]]['Subject']),
+        set(database[sheets[3]]['Subject']),
+    ]
+
+    sets_of_ids_v3 = [
+        set(database[sheets[4]]['Subject']),
+        set(database[sheets[5]]['Subject']),
+    ]
+
     common_ids = set.intersection(*sets_of_ids)
     common_ids_on = set.intersection(*sets_of_ids_on)
     common_ids_off = set.intersection(*sets_of_ids_off)
+    common_ids_v1 = set.intersection(*sets_of_ids_v1)
+    common_ids_v2 = set.intersection(*sets_of_ids_v2)
+    common_ids_v3 = set.intersection(*sets_of_ids_v3)
 
     for sheet_name, data in database.items():
         filtered_dfs = data[data['Subject'].isin(common_ids)]
@@ -62,7 +81,16 @@ def reduce_db_to_consistent_subjects(database, sheets):
             filtered_dfs_onoff = database_onoff[sheet_name][database_onoff[sheet_name]['Subject'].isin(common_ids_off)]
             database_onoff[sheet_name] = filtered_dfs_onoff
 
-    return database, database_onoff
+    for sheet_name, data in database_visits.items():
+        if "Visit 1" in sheet_name:
+            filtered_dfs = database_visits[sheet_name][database_visits[sheet_name]['Subject'].isin(common_ids_v1)]
+        elif "Visit 2" in sheet_name:
+            filtered_dfs = database_visits[sheet_name][database_visits[sheet_name]['Subject'].isin(common_ids_v2)]
+        elif "Visit 3" in sheet_name:
+            filtered_dfs = database_visits[sheet_name][database_visits[sheet_name]['Subject'].isin(common_ids_v3)]
+        database_visits[sheet_name] = filtered_dfs
+        
+    return database, database_onoff, database_visits
 
 
 def extract_updrs_dictionary_keys(path_to_updrs_keys):
@@ -80,9 +108,10 @@ if __name__ == "__main__":
     path_to_updrs_keys = os.path.join(base_PPP_folder, "updrs_analysis", "updrs_keys.xlsx")
     path_to_ppp_data_comp = os.path.join(base_PPP_folder, "updrs_analysis", "ppp_updrs_database_compmetrics.xlsx")
     path_to_ppp_data_clean = os.path.join(base_PPP_folder, "updrs_analysis", "ppp_updrs_database_cleanUPDRS.xlsx")
-    path_to_ppp_data_reduced = os.path.join(base_PPP_folder, "updrs_analysis", "ppp_updrs_database_clean_and_reduced.xlsx")
-    path_to_ppp_data_reduced_offon = os.path.join(base_PPP_folder, "updrs_analysis", "ppp_updrs_database_clean_and_reduced_off-on.xlsx")
-
+    path_to_ppp_data_reduced = os.path.join(base_PPP_folder, "updrs_analysis", "ppp_updrs_database_consistent_subjects.xlsx")
+    path_to_ppp_data_reduced_offon = os.path.join(base_PPP_folder, "updrs_analysis", "ppp_updrs_database_consistent_subjects_by_off-on.xlsx")
+    path_to_ppp_data_reduced_visits = os.path.join(base_PPP_folder, "updrs_analysis", "ppp_updrs_database_consistent_subjects_by_visit.xlsx")
+    
     if run_local: print("----- LOADING DATABASE -----")
     excel_file = pd.ExcelFile(path_to_ppp_data_comp)
     sheets = excel_file.sheet_names
@@ -102,7 +131,7 @@ if __name__ == "__main__":
             data.to_excel(writer, sheet_name=sheet_name, index=False)
 
     if run_local: print("----- INCLUDING ONLY PARTICIPANTS WITH COMPLETE DATA ACROSS THE 3 SESSIONS -----")
-    [ppp_database, database_onoff] = reduce_db_to_consistent_subjects(ppp_database, sheets)
+    [ppp_database, database_onoff, database_visits] = reduce_db_to_consistent_subjects(ppp_database, sheets)
 
     if run_local: print(F"----- REDUCED DATABASE SAVED TO {path_to_ppp_data_reduced} -----")
     with pd.ExcelWriter(path_to_ppp_data_reduced, engine='openpyxl') as writer:
@@ -112,6 +141,11 @@ if __name__ == "__main__":
     if run_local: print(F"----- REDUCED OFF-ON DATABASE SAVED TO {path_to_ppp_data_reduced_offon} -----")
     with pd.ExcelWriter(path_to_ppp_data_reduced_offon, engine='openpyxl') as writer:
         for sheet_name, data in database_onoff.items():
+            data.to_excel(writer, sheet_name=sheet_name, index=False)
+            
+    if run_local: print(F"----- REDUCED VISITS DATABASE SAVED TO {path_to_ppp_data_reduced_visits} -----")
+    with pd.ExcelWriter(path_to_ppp_data_reduced_visits, engine='openpyxl') as writer:
+        for sheet_name, data in database_visits.items():
             data.to_excel(writer, sheet_name=sheet_name, index=False)
 
     sys.exit()

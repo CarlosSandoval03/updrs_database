@@ -25,13 +25,26 @@ from matplotlib.ticker import PercentFormatter
 
 
 
-def percentage_change(ratingOn, ratingOff, alpha=0.5):
+def percentage_change_Elble(ratingOn, ratingOff, alpha=0.5):
     if len(ratingOn) != len(ratingOff):
         raise ValueError("Rating ON and Rating OFF have different number of elements.")
     if len(ratingOn) > 1:
         change = [100*(pow(10, alpha*(ratingOn[i] - ratingOff[i]))-1) for i, _ in enumerate(ratingOn)]
     else:
         change = 100*(pow(10, alpha*(ratingOn - ratingOff))-1)
+    return [-1 * x for x in change] # [-1 * x for x in change] # change
+
+
+def percentage_change_Basic(ratingOn, ratingOff, alpha=0.5):
+    if len(ratingOn) != len(ratingOff):
+        raise ValueError("Rating ON and Rating OFF have different number of elements.")
+    if len(ratingOn) > 1:
+        change = [
+            100 * ((ratingOff[i] - ratingOn[i]) / ratingOff[i]) if ratingOff[i] != 0 else 0
+            for i in range(len(ratingOn))
+        ]
+    else:
+        change = 100*((ratingOff - ratingOn) / ratingOff)
     return change #[-1 * x for x in change]
 
 
@@ -121,7 +134,7 @@ def create_histograms_for_pc(changes_data, updrs_key, visit, nbins, results_fold
         plt.clf()
 
 
-def percentage_change_plot(database, updrs_keys, visits, sheets, results_folder, analysis_name, style="all", dataset="ppp", typeC="offon", filterHandsTremorFlag=True, includeGaussianCurve = True):
+def percentage_change_plot(database, updrs_keys, visits, sheets, results_folder, analysis_name, style="all", dataset="ppp", typeC="offon", filterHandsTremorFlag=True, includeGaussianCurve = True, functionPerChange = percentage_change_Elble):
     nbins = 10
     visits = [v-1 for v in visits]
     database_c = copy.deepcopy(database)
@@ -160,7 +173,7 @@ def percentage_change_plot(database, updrs_keys, visits, sheets, results_folder,
                 offD, onD = cleaned_Args[0], cleaned_Args[1]
 
                 changes_data = {}
-                changes_data["temp"] = percentage_change(copy.deepcopy(onD), copy.deepcopy(offD))
+                changes_data["temp"] = functionPerChange(copy.deepcopy(onD), copy.deepcopy(offD))
 
                 create_histograms_for_pc(changes_data, updrs_key, visit, nbins, results_folder, analysis_name, style, typeC, includeGaussianCurve)
 
@@ -192,19 +205,19 @@ def percentage_change_plot(database, updrs_keys, visits, sheets, results_folder,
 
                 if len(visits) == 2:
                     changes_data = {}
-                    changes_data["temp"] = percentage_change(copy.deepcopy(cleaned_Args[visits[0]]), copy.deepcopy(cleaned_Args[visits[1]]))
+                    changes_data["temp"] = functionPerChange(copy.deepcopy(cleaned_Args[visits[0]]), copy.deepcopy(cleaned_Args[visits[1]]))
                     create_histograms_for_pc(changes_data, updrs_key, visits, nbins, results_folder, analysis_name, style, typeC, ses, includeGaussianCurve)
                 elif len(visits) == 3:
                     changes_data = {}
-                    changes_data["temp"] = percentage_change(cleaned_Args[visits[0]], cleaned_Args[visits[1]])
+                    changes_data["temp"] = functionPerChange(cleaned_Args[visits[0]], cleaned_Args[visits[1]])
                     create_histograms_for_pc(changes_data, updrs_key, [visits[0], visits[1]], nbins, results_folder, analysis_name, style, typeC, ses, includeGaussianCurve)
 
                     changes_data = {}
-                    changes_data["temp"] = percentage_change(cleaned_Args[visits[0]], cleaned_Args[visits[2]])
+                    changes_data["temp"] = functionPerChange(cleaned_Args[visits[0]], cleaned_Args[visits[2]])
                     create_histograms_for_pc(changes_data, updrs_key, [visits[0], visits[2]], nbins, results_folder, analysis_name, style, typeC, ses, includeGaussianCurve)
 
                     changes_data = {}
-                    changes_data["temp"] = percentage_change(cleaned_Args[visits[1]], cleaned_Args[visits[2]])
+                    changes_data["temp"] = functionPerChange(cleaned_Args[visits[1]], cleaned_Args[visits[2]])
                     create_histograms_for_pc(changes_data, updrs_key, [visits[1], visits[2]], nbins, results_folder, analysis_name, style, typeC, ses, includeGaussianCurve)
     return 0
 
@@ -260,7 +273,7 @@ def cleanNaNRowsifAnyMult(*args):
 
 def scatter_reg_plot(database, conf_dicts, sheets, results_folder, analysis_name, style="all", dataset="ppp", filterHandsTremorFlag=True):
     # {'x': [{'off': 'LEDD', 'on': 'LEDD'}], 'y': [{'off': 'AvgTotalU3', 'on': 'AvgTotalU3'}], 'visit': [1, 2, 3], 'ses': ['off', 'on'], 'name': 'LongOffOnLEDDAvgTotalU3'}
-    colors = ['red', 'blue', 'green', 'purple', 'orange', 'brown']
+    colors = ['red', 'blue', 'green', 'purple', 'orange', 'yellow', 'brown', 'black']
     df = copy.deepcopy(database)
     Path(os.path.join(results_folder, analysis_name)).mkdir(parents=True, exist_ok=True)
     for confs in conf_dicts:
@@ -268,14 +281,23 @@ def scatter_reg_plot(database, conf_dicts, sheets, results_folder, analysis_name
             raise ValueError("Length of X axis element should be 1 or equal to length of Y axis elements.")
         timeName, sesName = getNamesOfComparisons(confs['visit'], confs['ses'])
 
+        fig = go.Figure()
+        plt.figure(figsize=(10, 6))
+        colIdx = 0
+
         for i_data, dataY in enumerate(confs['y']):
             if len(confs['x']) == len(confs['y']):
                 dataX = confs['x'][i_data]
             else:
                 dataX = confs['x'][0]
-            fig = go.Figure()
-            plt.figure(figsize=(10, 6))
-            colIdx = 0
+            if len(confs['y']) > 1:
+                nameImageExtra = "MultipleMetrics_"
+            else:
+                nameImageExtra = ""
+                fig = go.Figure()
+                plt.figure(figsize=(10, 6))
+                colIdx = 0
+
             for visit in confs['visit']:
                 for ses in confs['ses']:
                     if ses == "off":
@@ -303,9 +325,15 @@ def scatter_reg_plot(database, conf_dicts, sheets, results_folder, analysis_name
                     x_range = np.linspace(min(xD), max(xD), 100)
                     y_range = slope * x_range + intercept
                     if dataset == "ppp":
-                        label_name = f'visit{visit}-{ses}'
+                        if len(confs['y']) > 1:
+                            label_name = f'visit{visit}-{ses}_{dataY["off"]}'
+                        else:
+                            label_name = f'visit{visit}-{ses}'
                     else:
-                        label_name = f'{ses}'
+                        if len(confs['y']) > 1:
+                            label_name = f'{ses}_{dataY["off"]}'
+                        else:
+                            label_name = f'{ses}'
 
                     if style == "all" or style == "plotly":
                         fig.add_trace(go.Scatter(x=xD, y=yD, mode='markers', name=label_name, marker=dict(color=colors[colIdx])))
@@ -318,19 +346,143 @@ def scatter_reg_plot(database, conf_dicts, sheets, results_folder, analysis_name
                         plt.ylabel(dataY['off'])
                         plt.legend(title='Visits and Sessions')
                     colIdx = colIdx + 1
+            if len(confs['y']) == 1:
+                if style == "all" or style == "plotly":
+                    fig.update_layout(title='Data Distribution', xaxis_title=dataX['off'], yaxis_title=dataY['off'])
+                    if dataset == "ppp":
+                        figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}-{dataY['off']}_{timeName}_{sesName}_plotly.png")
+                    else:
+                        figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}-{dataY['off']}_{sesName}_plotly.png")
+                    fig.write_image(figure_name)
+                if style == "all" or style == "sns":
+                    if dataset == "ppp":
+                        figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}-{dataY['off']}_{timeName}_{sesName}_sns.png")
+                    else:
+                        figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}-{dataY['off']}_{sesName}_sns.png")
+                    plt.savefig(figure_name)
+                    plt.clf()
 
+        if len(confs['y']) > 1:
             if style == "all" or style == "plotly":
                 fig.update_layout(title='Data Distribution', xaxis_title=dataX['off'], yaxis_title=dataY['off'])
                 if dataset == "ppp":
-                    figure_name = os.path.join(results_folder, analysis_name, f"sp_{dataX['off']}-{dataY['off']}_{timeName}_{sesName}_plotly.png")
+                    figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}-{dataY['off']}_{timeName}_{sesName}_plotly.png")
                 else:
-                    figure_name = os.path.join(results_folder, analysis_name, f"sp_{dataX['off']}-{dataY['off']}_{sesName}_plotly.png")
+                    figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}-{dataY['off']}_{sesName}_plotly.png")
                 fig.write_image(figure_name)
             if style == "all" or style == "sns":
                 if dataset == "ppp":
-                    figure_name = os.path.join(results_folder, analysis_name, f"sp_{dataX['off']}-{dataY['off']}_{timeName}_{sesName}_sns.png")
+                    figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}-{dataY['off']}_{timeName}_{sesName}_sns.png")
                 else:
-                    figure_name = os.path.join(results_folder, analysis_name, f"sp_{dataX['off']}-{dataY['off']}_{sesName}_sns.png")
+                    figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}-{dataY['off']}_{sesName}_sns.png")
+                plt.savefig(figure_name)
+                plt.clf()
+
+    return 0
+
+
+def scatter_reg_plot_pChange(database, conf_dicts, sheets, results_folder, analysis_name, style="all", dataset="ppp", filterHandsTremorFlag=True, functionPerChange=percentage_change_Elble):
+    # {'x': [{'off': 'LEDD', 'on': 'LEDD'}], 'y': [{'off': 'AvgTotalU3', 'on': 'AvgTotalU3'}], 'visit': [1, 2, 3], 'ses': ['off', 'on'], 'name': 'LongOffOnLEDDAvgTotalU3'}
+    colors = ['red', 'blue', 'green', 'purple', 'orange', 'yellow', 'brown', 'black']
+    df = copy.deepcopy(database)
+    Path(os.path.join(results_folder, analysis_name)).mkdir(parents=True, exist_ok=True)
+    for confs in conf_dicts:
+        if len(confs['x'])>1 and len(confs['x']) != len(confs['y']):
+            raise ValueError("Length of X axis element should be 1 or equal to length of Y axis elements.")
+        timeName, sesName = getNamesOfComparisons(confs['visit'], confs['ses'])
+        fig = go.Figure()
+        plt.figure(figsize=(10, 6))
+        colIdx = 0
+
+        for i_data, dataY in enumerate(confs['y']):
+            if len(confs['x']) == len(confs['y']):
+                dataX = confs['x'][i_data]
+            else:
+                dataX = confs['x'][0]
+            if len(confs['y']) > 1:
+                nameImageExtra = "MultipleMetrics_"
+            else:
+                nameImageExtra = ""
+                fig = go.Figure()
+                plt.figure(figsize=(10, 6))
+                colIdx = 0
+
+            for visit in confs['visit']:
+                sess = confs['ses']
+                frameOff = 2*(visit-1)
+                frameOn = 2*(visit-1)+1
+                if filterHandsTremorFlag == True:
+                    idx = filterHandsTremorOnly(df[sheets[frameOff]], df[sheets[frameOff]], dataset=dataset)
+                    xD = pd.Series([df[sheets[frameOff]][dataX["off"]][i] for i in idx])
+                    y1 = pd.Series([df[sheets[frameOn]][dataY["off"]][i] for i in idx])
+                    y2 = pd.Series([df[sheets[frameOff]][dataY["off"]][i] for i in idx])
+                else:
+                    xD = df[sheets[frameOff]][dataX["off"]]
+                    y1 = df[sheets[frameOn]][dataY["off"]]
+                    y2 = df[sheets[frameOff]][dataY["off"]]
+                yD = pd.Series(functionPerChange(y1, y2))
+                xD, yD = cleanNaNRowsifAnyMult(xD, yD)
+
+                df_p = {}
+                df_p["X"] = xD
+                df_p["Y"] = yD
+
+                # Calculate and plot regression line
+                slope, intercept, r_value, p_value, std_err = stats.linregress(xD, yD)
+                x_range = np.linspace(min(xD), max(xD), 100)
+                y_range = slope * x_range + intercept
+                if dataset == "ppp":
+                    if len(confs['y']) > 1:
+                        label_name = f'visit{visit}_{dataY["off"]}'
+                    else:
+                        label_name = f'visit{visit}'
+                else:
+                    if len(confs['y']) > 1:
+                        label_name = f'{dataY["off"]}'
+                    else:
+                        label_name = f'Not Implemented'
+
+                if style == "all" or style == "plotly":
+                    fig.add_trace(go.Scatter(x=xD, y=yD, mode='markers', name=label_name, marker=dict(color=colors[colIdx])))
+                    fig.add_trace(go.Scatter(x=x_range, y=y_range, mode='lines', line=dict(color=colors[colIdx], dash='dash'), showlegend=False))
+                if style == "all" or style == "sns":
+                    sns.scatterplot(data=df_p, x='X', y='Y', color=colors[colIdx], label=label_name)
+                    sns.regplot(data=df_p, x='X', y='Y', scatter=False, color=colors[colIdx], line_kws={'linestyle': '-', 'linewidth': 2}, ci=None) # Add ci=None for deleting shaded area around regression lines
+                    plt.title('Data Distribution')
+                    plt.xlabel(dataX['off'])
+                    plt.ylabel("% Change")
+                    plt.legend(title='Visits and Sessions')
+                colIdx = colIdx + 1
+
+                if len(confs['y']) == 1:
+                    if style == "all" or style == "plotly":
+                        fig.update_layout(title='Data Distribution', xaxis_title=dataX['off'], yaxis_title="% Change")
+                        if dataset == "ppp":
+                            figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}-{dataY['off']}_{timeName}_{sesName}_plotly.png")
+                        else:
+                            figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}-{dataY['off']}_{sesName}_plotly.png")
+                        fig.write_image(figure_name)
+                    if style == "all" or style == "sns":
+                        if dataset == "ppp":
+                            figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}-{dataY['off']}_{timeName}_{sesName}_sns.png")
+                        else:
+                            figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}-{dataY['off']}_{sesName}_sns.png")
+                        plt.savefig(figure_name)
+                        plt.clf()
+
+        if len(confs['y']) > 1:
+            if style == "all" or style == "plotly":
+                fig.update_layout(title='Data Distribution', xaxis_title=dataX['off'], yaxis_title="% Change")
+                if dataset == "ppp":
+                    figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}_{timeName}_{sesName}_plotly.png")
+                else:
+                    figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}_{sesName}_plotly.png")
+                fig.write_image(figure_name)
+            if style == "all" or style == "sns":
+                if dataset == "ppp":
+                    figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}_{timeName}_{sesName}_sns.png")
+                else:
+                    figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}_{sesName}_sns.png")
                 plt.savefig(figure_name)
                 plt.clf()
     return 0
@@ -572,6 +724,7 @@ def raincloud_plot(data, updrs_conf, sheets, results_folder, analysis_name, data
                 figure_name = os.path.join(results_folder, analysis_name, f"rc_{updrs_key['off']}-{updrs_key['on']}_{timeName}_{sesName}_sns.png")
             plt.savefig(figure_name, bbox_inches='tight')
             plt.clf()
+            plt.close()
 
     return 0
 
@@ -710,40 +863,24 @@ def create_stats_table(dataO, results_folder, analysis_name, sheets):
     for i, sheet in enumerate(database.keys()):
         totalsU3_C = create_string_mean_std(database[sheet]["TotalU3"])
         totalsU3_F = create_string_mean_std(handsTremorFiltered[sheet]["TotalU3"])
-
         brady_C = create_string_mean_std(database[sheet]["Brady14Items"])
         brady_F = create_string_mean_std(handsTremorFiltered[sheet]["Brady14Items"])
-
-        rigi_C = create_string_mean_std(database[sheet]["LimbsRigidity"])
-        rigi_F = create_string_mean_std(handsTremorFiltered[sheet]["LimbsRigidity"])
-
+        rigi_C = create_string_mean_std(database[sheet]["LimbsRigidity5Items"])
+        rigi_F = create_string_mean_std(handsTremorFiltered[sheet]["LimbsRigidity5Items"])
         tremor_C = create_string_mean_std(database[sheet]["LimbsRestTrem"])
         tremor_F = create_string_mean_std(handsTremorFiltered[sheet]["LimbsRestTrem"])
-
         stats_table["Complete97(No-NaNs)"][sheet] = [totalsU3_C, brady_C, rigi_C, tremor_C]
         stats_table["HandsTremorFiltered"][sheet] = [totalsU3_F, brady_F, rigi_F, tremor_F]
 
         if i in [1, 3, 5]:
-            pcU3_C = create_string_mean_std(percentage_change(database[sheets[i]]["TotalU3"],
-                                                              database[sheets[i-1]]["TotalU3"], alpha=0.5))
-            pcU3_F = create_string_mean_std(percentage_change(handsTremorFiltered[sheets[i]]["TotalU3"],
-                                                              handsTremorFiltered[sheets[i-1]]["TotalU3"], alpha=0.5))
-
-            pcBrady_C = create_string_mean_std(percentage_change(database[sheets[i]]["Brady14Items"],
-                                                              database[sheets[i - 1]]["Brady14Items"], alpha=0.5))
-            pcBrady_F = create_string_mean_std(percentage_change(handsTremorFiltered[sheets[i]]["Brady14Items"],
-                                                              handsTremorFiltered[sheets[i - 1]]["Brady14Items"], alpha=0.5))
-
-            pcRigi_C = create_string_mean_std(percentage_change(database[sheets[i]]["LimbsRigidity"],
-                                                              database[sheets[i - 1]]["LimbsRigidity"], alpha=0.5))
-            pcRigi_F = create_string_mean_std(percentage_change(handsTremorFiltered[sheets[i]]["LimbsRigidity"],
-                                                              handsTremorFiltered[sheets[i - 1]]["LimbsRigidity"], alpha=0.5))
-
-            pcTremor_C = create_string_mean_std(percentage_change(database[sheets[i]]["LimbsRestTrem"],
-                                                              database[sheets[i - 1]]["LimbsRestTrem"], alpha=0.5))
-            pcTremor_F = create_string_mean_std(percentage_change(handsTremorFiltered[sheets[i]]["LimbsRestTrem"],
-                                                              handsTremorFiltered[sheets[i - 1]]["LimbsRestTrem"], alpha=0.5))
-
+            pcU3_C = create_string_mean_std(percentage_change_Elble(database[sheets[i]]["TotalU3"], database[sheets[i-1]]["TotalU3"], alpha=0.5))
+            pcU3_F = create_string_mean_std(percentage_change_Elble(handsTremorFiltered[sheets[i]]["TotalU3"], handsTremorFiltered[sheets[i-1]]["TotalU3"], alpha=0.5))
+            pcBrady_C = create_string_mean_std(percentage_change_Elble(database[sheets[i]]["Brady14Items"], database[sheets[i - 1]]["Brady14Items"], alpha=0.5))
+            pcBrady_F = create_string_mean_std(percentage_change_Elble(handsTremorFiltered[sheets[i]]["Brady14Items"], handsTremorFiltered[sheets[i - 1]]["Brady14Items"], alpha=0.5))
+            pcRigi_C = create_string_mean_std(percentage_change_Elble(database[sheets[i]]["LimbsRigidity5Items"], database[sheets[i - 1]]["LimbsRigidity5Items"], alpha=0.5))
+            pcRigi_F = create_string_mean_std(percentage_change_Elble(handsTremorFiltered[sheets[i]]["LimbsRigidity5Items"], handsTremorFiltered[sheets[i - 1]]["LimbsRigidity5Items"], alpha=0.5))
+            pcTremor_C = create_string_mean_std(percentage_change_Elble(database[sheets[i]]["LimbsRestTrem"], database[sheets[i - 1]]["LimbsRestTrem"], alpha=0.5))
+            pcTremor_F = create_string_mean_std(percentage_change_Elble(handsTremorFiltered[sheets[i]]["LimbsRestTrem"], handsTremorFiltered[sheets[i - 1]]["LimbsRestTrem"], alpha=0.5))
             stats_table["Complete97(No-NaNs)"][f"% Change {i}"] = [pcU3_C, pcBrady_C, pcRigi_C, pcTremor_C]
             stats_table["HandsTremorFiltered"][f"% Change {i}"] = [pcU3_F, pcBrady_F, pcRigi_F, pcTremor_F]
 
@@ -752,13 +889,36 @@ def create_stats_table(dataO, results_folder, analysis_name, sheets):
             u3F = create_string_meandiff_ci(handsTremorFiltered[sheets[i]]["TotalU3"], handsTremorFiltered[sheets[i-1]]["TotalU3"])
             bradyC = create_string_meandiff_ci(database[sheets[i]]["Brady14Items"], database[sheets[i - 1]]["Brady14Items"])
             bradyF = create_string_meandiff_ci(handsTremorFiltered[sheets[i]]["Brady14Items"], handsTremorFiltered[sheets[i - 1]]["Brady14Items"])
-            rigiC = create_string_meandiff_ci(database[sheets[i]]["LimbsRigidity"], database[sheets[i - 1]]["LimbsRigidity"])
-            rigiF = create_string_meandiff_ci(handsTremorFiltered[sheets[i]]["LimbsRigidity"], handsTremorFiltered[sheets[i - 1]]["LimbsRigidity"])
+            rigiC = create_string_meandiff_ci(database[sheets[i]]["LimbsRigidity5Items"], database[sheets[i - 1]]["LimbsRigidity5Items"])
+            rigiF = create_string_meandiff_ci(handsTremorFiltered[sheets[i]]["LimbsRigidity5Items"], handsTremorFiltered[sheets[i - 1]]["LimbsRigidity5Items"])
             tremorC = create_string_meandiff_ci(database[sheets[i]]["LimbsRestTrem"], database[sheets[i - 1]]["LimbsRestTrem"])
             tremorF = create_string_meandiff_ci(handsTremorFiltered[sheets[i]]["LimbsRestTrem"], handsTremorFiltered[sheets[i - 1]]["LimbsRestTrem"])
+            stats_table["Complete97(No-NaNs)"][f"MeansDiff (CI) {i}"] = [u3C, bradyC, rigiC, tremorC]
+            stats_table["HandsTremorFiltered"][f"MeansDiff (CI) {i}"] = [u3F, bradyF, rigiF, tremorF]
 
-            stats_table["Complete97(No-NaNs)"][f"MeansDiff and CI {i}"] = [u3C, bradyC, rigiC, tremorC]
-            stats_table["HandsTremorFiltered"][f"MeansDiff and CI {i}"] = [u3F, bradyF, rigiF, tremorF]
+            # Cohen's d and CI
+            u3C = create_string_cohen_d_ci(database[sheets[i]]["TotalU3"], database[sheets[i - 1]]["TotalU3"])
+            u3F = create_string_cohen_d_ci(handsTremorFiltered[sheets[i]]["TotalU3"], handsTremorFiltered[sheets[i - 1]]["TotalU3"])
+            bradyC = create_string_cohen_d_ci(database[sheets[i]]["Brady14Items"], database[sheets[i - 1]]["Brady14Items"])
+            bradyF = create_string_cohen_d_ci(handsTremorFiltered[sheets[i]]["Brady14Items"], handsTremorFiltered[sheets[i - 1]]["Brady14Items"])
+            rigiC = create_string_cohen_d_ci(database[sheets[i]]["LimbsRigidity5Items"], database[sheets[i - 1]]["LimbsRigidity5Items"])
+            rigiF = create_string_cohen_d_ci(handsTremorFiltered[sheets[i]]["LimbsRigidity5Items"], handsTremorFiltered[sheets[i - 1]]["LimbsRigidity5Items"])
+            tremorC = create_string_cohen_d_ci(database[sheets[i]]["LimbsRestTrem"], database[sheets[i - 1]]["LimbsRestTrem"])
+            tremorF = create_string_cohen_d_ci(handsTremorFiltered[sheets[i]]["LimbsRestTrem"], handsTremorFiltered[sheets[i - 1]]["LimbsRestTrem"])
+            stats_table["Complete97(No-NaNs)"][f"Cohen's d (CI) {i}"] = [u3C, bradyC, rigiC, tremorC]
+            stats_table["HandsTremorFiltered"][f"Cohen's d (CI) {i}"] = [u3F, bradyF, rigiF, tremorF]
+
+            # p-value
+            u3C = paired_ttest(database[sheets[i]]["TotalU3"], database[sheets[i - 1]]["TotalU3"])
+            u3F = paired_ttest(handsTremorFiltered[sheets[i]]["TotalU3"], handsTremorFiltered[sheets[i - 1]]["TotalU3"])
+            bradyC = paired_ttest(database[sheets[i]]["Brady14Items"], database[sheets[i - 1]]["Brady14Items"])
+            bradyF = paired_ttest(handsTremorFiltered[sheets[i]]["Brady14Items"], handsTremorFiltered[sheets[i - 1]]["Brady14Items"])
+            rigiC = paired_ttest(database[sheets[i]]["LimbsRigidity5Items"], database[sheets[i - 1]]["LimbsRigidity5Items"])
+            rigiF = paired_ttest(handsTremorFiltered[sheets[i]]["LimbsRigidity5Items"], handsTremorFiltered[sheets[i - 1]]["LimbsRigidity5Items"])
+            tremorC = paired_ttest(database[sheets[i]]["LimbsRestTrem"], database[sheets[i - 1]]["LimbsRestTrem"])
+            tremorF = paired_ttest(handsTremorFiltered[sheets[i]]["LimbsRestTrem"], handsTremorFiltered[sheets[i - 1]]["LimbsRestTrem"])
+            stats_table["Complete97(No-NaNs)"][f"p-value {i}"] = [u3C, bradyC, rigiC, tremorC]
+            stats_table["HandsTremorFiltered"][f"p-value {i}"] = [u3F, bradyF, rigiF, tremorF]
 
     with pd.ExcelWriter(os.path.join(results_folder, analysis_name, "table_summary_stats.xlsx"), engine='openpyxl') as writer:
         for sheet_name, data in stats_table.items():
@@ -774,7 +934,7 @@ def create_string_mean_std(data):
     return sumStr
 
 
-def create_string_meandiff_ci(data1, data2):
+def create_string_meandiff_ci_array(data1, data2):
     differences = [data1[i] - data2[i] for i, _ in enumerate(data1)]
     meanDiff = np.mean(differences)
     meanDiff = abs(meanDiff)
@@ -791,20 +951,151 @@ def create_string_meandiff_ci(data1, data2):
     return sumStr
 
 
-def create_string_meandiff_ci2(data1, data2):
-    mean1 = np.mean(data1)
-    mean2 = np.mean(data2)
-    se1 = stats.sem(data1)
-    se2 = stats.sem(data2)
+def create_string_meandiff_ci(data1, data2):
+    mean1, mean2 = np.mean(data1), np.mean(data2)
     mean_diff = mean1 - mean2
     mean_diff = abs(mean_diff)
-    se_diff = np.sqrt(se1 ** 2 + se2 ** 2)
+    std1, std2 = np.std(data1, ddof=1), np.std(data2, ddof=1)
+    n1, n2 = len(data1), len(data2)
+    se_diff = np.sqrt((std1 ** 2 / n1) + (std2 ** 2 / n2))
     confidence_level = 0.95
-    z_score = stats.norm.ppf(1 - (1 - confidence_level) / 2)
-    ci_lower = mean_diff - z_score * se_diff
-    ci_upper = mean_diff + z_score * se_diff
+    alpha = 1 - confidence_level
+    z = stats.norm.ppf(1 - alpha / 2)
+    margin_error = z * se_diff
+    ci_lower = mean_diff - margin_error
+    ci_upper = mean_diff + margin_error
+
     sumStr = f"{mean_diff:.3f} ({ci_lower:.3f}-{ci_upper:.3f})"
     return sumStr
+
+
+def cohens_d(data1, data2):
+    n1 = len(data1)
+    n2 = len(data2)
+    dof = n1 + n2 - 2
+    std_pooled = np.sqrt((((n1 - 1)*(np.std(data1)**2))+((n2 - 1)*(np.std(data2)**2))) / dof)
+    d = abs(np.mean(data1) - np.mean(data2)) / std_pooled
+    return d
+
+
+def create_string_cohen_d_ci(data1, data2):
+    z = 1.96 # Critical value z for a 95% confidence
+    confidence_level = 0.95
+    z = stats.norm.ppf(1 - (1 - confidence_level) / 2)
+    n1 = len(data1)
+    n2 = len(data2)
+    d = cohens_d(data1, data2)
+    std_error_d = np.sqrt(((n1 + n2) / (n1 * n2)) + ((d ** 2)/(2 * (n1 + n2))))
+    margin_error = z * std_error_d
+    lower_bound = d - margin_error
+    upper_bound = d + margin_error
+    sumStr = f"{d:.3f} ({lower_bound:.3f}-{upper_bound:.3f})"
+    return sumStr
+
+
+def paired_ttest(data1, data2):
+    t_stat, p_value = stats.ttest_rel(data2, data1)
+    return f"{p_value:.5f}"
+
+
+def single_sub_trend_plot(data, updrs_conf, sheets, results_folder, analysis_name, dataset="ppp", filterHandsTremorFlag=True):
+    # Instead of group I have sub-ID
+    database = copy.deepcopy(data)
+    Path(os.path.join(results_folder, analysis_name)).mkdir(parents=True, exist_ok=True)
+
+    subIDKey = "Subject" if dataset == "ppp" else "PatCode"
+    dx = "Visit"
+    dhue = subIDKey
+
+    for confs in updrs_conf:
+        plt.figure(figsize=(10, 6))
+        df = {}
+        df[dx] = pd.Series(dtype='str')
+        df[dhue] = pd.Series(dtype='str')
+        updrs_keys = confs["updrs"]
+        if len(updrs_keys)>1:
+            nameUPDRSkeys = ""
+            for updrs_key in updrs_keys:
+                df[updrs_key["off"]] = pd.Series(dtype='float')
+                nameUPDRSkeys = nameUPDRSkeys + updrs_key["off"]
+        else:
+            df[updrs_keys[0]["off"]] = pd.Series(dtype='float')
+            nameUPDRSkeys = updrs_keys[0]["off"]
+        timeName, sesName = getNamesOfComparisons(confs["visit"], confs["ses"])
+
+        for visit in confs["visit"]:
+            sheetOFF = 2 * (visit - 1) if dataset == "ppp" else 0
+            sheetON = 2 * (visit - 1) + 1 if dataset == "ppp" else 1
+            if filterHandsTremorFlag:
+                idx = filterHandsTremorOnly(database[sheets[sheetON]], database[sheets[sheetOFF]], dataset=dataset)
+
+            for updrs in updrs_keys:
+                key = updrs["off"]
+                data_seriesOFF = database[sheets[sheetOFF]][updrs["off"]]
+                data_seriesON = database[sheets[sheetON]][updrs["on"]]
+
+                if filterHandsTremorFlag:
+                    data_seriesOFF = pd.Series([data_seriesOFF[i] for i in idx])
+                    data_seriesON = pd.Series([data_seriesON[i] for i in idx])
+
+                data_series = data_seriesOFF - data_seriesON
+
+                if not df[key].empty:
+                    df[key] = pd.concat([df[key], data_series], ignore_index=True)
+                else:
+                    df[key] = data_series
+
+            lengthData = len(data_series)
+
+            visit_label = {
+                1: "Baseline" if dataset == "ppp" else "DRDR",
+                2: "Year 1",
+                3: "Year 2"
+            }.get(visit, "Unknown")
+            df[dx] = pd.concat([df[dx], pd.Series([visit_label] * lengthData)], ignore_index=True)
+
+
+            if filterHandsTremorFlag:
+                subIDs = pd.Series([database[sheets[sheetOFF]][subIDKey][i] for i in idx])
+            else:
+                subIDs = database[sheets[sheetOFF]][subIDKey]
+            df[dhue] = pd.concat([df[dhue], subIDs], ignore_index=True)
+
+        if isinstance(data, dict):
+            df = pd.DataFrame(df)
+
+        cleaned = cleanNaNRowsifAnyMult(df[key], df[dx], df[dhue])
+        df[key], df[dx], df[dhue] = cleaned[0], cleaned[1], cleaned[2]
+
+        df_melted = df.melt(id_vars=[dx, dhue], var_name='UPDRS', value_name='value')
+        g = sns.FacetGrid(df_melted, col='UPDRS', hue=dhue, sharey=False, height=5, aspect=1.5)
+        g.map_dataframe(plot_individual_lines, dx=dx, dhue=dhue)
+        # g.add_legend(title=dhue)
+        g.set_axis_labels(dx, "UPDRS Score")
+        g.set_titles("{col_name}")
+
+        # Perform ANOVA for each measurement
+        # for measurement in df_melted['UPDRS'].unique():
+        #     formula = f'value ~ C({dx}) + C({dhue}) + C({dx}):C({dhue})'
+        #     model = ols(formula, data=df_melted[df_melted['UPDRS'] == measurement]).fit()
+        #     anova_table = sm.stats.anova_lm(model, typ=2)
+        #     anova_table.to_excel(os.path.join(results_folder, analysis_name, f"ANOVA results for {measurement}_{timeName}-{sesName}.xlsx"), engine='openpyxl', index=True)
+
+        if dataset == "ppp":
+            figure_name = os.path.join(results_folder, analysis_name, f"cd_{nameUPDRSkeys}_{timeName}-{sesName}_sns.png")
+        else:
+            figure_name = os.path.join(results_folder, analysis_name, f"cd_{nameUPDRSkeys}_{sesName}_sns.png")
+        plt.savefig(figure_name, bbox_inches='tight')
+
+        plt.clf()
+    return 0
+
+
+def plot_individual_lines(data, dx, dhue, **kwargs):
+    participants = data[dhue].unique()
+    for participant in participants:
+        sns.lineplot(data=data[data[dhue] == participant], x=dx, y='value', errorbar=None, marker='o', **kwargs)
+
 
 if __name__ == "__main__":
     # General variables
@@ -813,7 +1104,7 @@ if __name__ == "__main__":
     # Paths
     base_PPP_folder = "/project/3024023.01/PPP-POM_cohort/"
     results_folder_ppp = "/project/3024023.01/PPP-POM_cohort/updrs_analysis/"
-    path_to_ppp_data_reduced = os.path.join(base_PPP_folder, "updrs_analysis", "ppp_updrs_database_clean_and_reduced.xlsx")
+    path_to_ppp_data_reduced = os.path.join(base_PPP_folder, "updrs_analysis", "ppp_updrs_database_consistent_subjects.xlsx")
 
     base_drdr_folder = "/project/3024023.01/fMRI_DRDR/"
     results_folder_drdr = "/project/3024023.01/fMRI_DRDR/updrs_analysis/"
@@ -841,45 +1132,80 @@ if __name__ == "__main__":
     plot_raincloud_flag = False
     plot_pdf_flag = False
     plot_coeffs_diff_flag = False
-    create_stats_table_flag = True
+    create_stats_table_flag = False
+    plot_single_sub_trends_flag = False
 
     """ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
     if plot_percentage_change_flag:
         if run_local: print("----- PLOTTING PERCENTAGE CHANGE -----")
-        analysis_name = "Percentage-Change"
+        analysis_name = "Percentage-Change-Basic_noFilter"
         visits_ppp = [1, 2, 3]
         visits_drdr = [1]  # ["UPDRS ON", "UPDRS OFF"]
-        updrs_keys_ppp = ["AvgLimbsRestTrem", "AvgBrady14Items", "AvgLimbsRigidity", "TotalU3"]
+        updrs_keys_ppp = ["AvgLimbsRestTrem", "AvgTremorUPDRS", "TremorUPDRS", "PosturalTremor", "AvgBrady14Items", "AvgBrady5Items", "AvgLimbsRigidity5Items", "AvgLimbsRigidity4Items", "AvgTotalU3", "TotalU3"]
         updrs_keys_drdr = ["AvgLimbsRestTrem", "AvgBrady14Items", "AvgLimbsRigidity", ["OFFU_tot", "ONU_tot"]]
 
-        percentage_change_plot(ppp_database, updrs_keys_ppp, visits_ppp, sheets_ppp, results_folder_ppp, analysis_name, style="all", dataset="ppp", typeC="offon", filterHandsTremorFlag=True, includeGaussianCurve = True)
-        percentage_change_plot(ppp_database, updrs_keys_ppp, visits_ppp, sheets_ppp, results_folder_ppp, analysis_name, style="all", dataset="ppp", typeC="longitudinal", filterHandsTremorFlag=True, includeGaussianCurve=True)
-        percentage_change_plot(drdr_database, updrs_keys_drdr, visits_drdr, sheets_drdr, results_folder_drdr, analysis_name, style="all", dataset="drdr", typeC="offon", filterHandsTremorFlag=True, includeGaussianCurve = True)
+        percentage_change_plot(ppp_database, updrs_keys_ppp, visits_ppp, sheets_ppp, results_folder_ppp, analysis_name, style="plotly", dataset="ppp", typeC="offon", filterHandsTremorFlag=False, includeGaussianCurve = True, functionPerChange = percentage_change_Basic)
+        percentage_change_plot(ppp_database, updrs_keys_ppp, visits_ppp, sheets_ppp, results_folder_ppp, analysis_name, style="plotly", dataset="ppp", typeC="longitudinal", filterHandsTremorFlag=False, includeGaussianCurve=True, functionPerChange = percentage_change_Basic)
+        percentage_change_plot(drdr_database, updrs_keys_drdr, visits_drdr, sheets_drdr, results_folder_drdr, analysis_name, style="plotly", dataset="drdr", typeC="offon", filterHandsTremorFlag=False, includeGaussianCurve = True, functionPerChange = percentage_change_Basic)
 
     """ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
     if plot_scatter_correlation_flag:
         if run_local: print("----- PLOTTING SCATTER PLOTS AND CORRELATION -----")
-        analysis_name = "scatter_plots"
+        analysis_name = "scatter_plots_Filter"
         updrs_conf_ppp = [
-            {'x': [{'off': 'LEDD', 'on': 'LEDD'}], 'y': [{'off': 'AvgTotalU3', 'on': 'AvgTotalU3'}], 'visit': [1], 'ses': ['off', 'on']},
-            {'x': [{'off': 'LEDD', 'on': 'LEDD'}], 'y': [{'off': 'AvgTotalU3', 'on': 'AvgTotalU3'}], 'visit': [1, 2], 'ses': ['off', 'on']},
-            {'x': [{'off': 'LEDD', 'on': 'LEDD'}], 'y': [{'off': 'AvgTotalU3', 'on': 'AvgTotalU3'}], 'visit': [1, 2, 3], 'ses': ['off', 'on']}
+            {'x': [{'off': 'LEDD', 'on': 'LEDD'}], 'y': [
+                {'off': 'AvgBrady14Items', 'on': 'AvgBrady14Items'},
+                {'off': 'AvgLimbsRigidity5Items', 'on': 'AvgLimbsRigidity5Items'},
+                {'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'},
+                {'off': 'AvgTremorUPDRS', 'on': 'AvgTremorUPDRS'}
+            ], 'visit': [1], 'ses': ['off', 'on']},
+            {'x': [{'off': 'LEDD', 'on': 'LEDD'}], 'y': [{'off': 'AvgBrady14Items', 'on': 'AvgBrady14Items'}], 'visit': [1, 2, 3], 'ses': ['off', 'on']},
+            {'x': [{'off': 'LEDD', 'on': 'LEDD'}], 'y': [{'off': 'AvgLimbsRigidity5Items', 'on': 'AvgLimbsRigidity5Items'}], 'visit': [1, 2, 3], 'ses': ['off', 'on']},
+            {'x': [{'off': 'LEDD', 'on': 'LEDD'}], 'y': [{'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'}], 'visit': [1, 2, 3], 'ses': ['off', 'on']},
+            {'x': [{'off': 'LEDD', 'on': 'LEDD'}], 'y': [{'off': 'AvgTremorUPDRS', 'on': 'AvgTremorUPDRS'}], 'visit': [1, 2, 3], 'ses': ['off', 'on']}
         ]
         updrs_conf_drdr = [
             {'x': [{'off': 'OFFTremorUPDRS', 'on': 'ONTremorUPDRS'}], 'y': [{'off': 'OFFU_tot', 'on': 'ONU_tot'}], 'visit': [1], 'ses': ['off', 'on']},
             {'x': [{'off': 'OFFTremorUPDRS', 'on': 'ONTremorUPDRS'}], 'y': [{'off': 'OFFU_tot', 'on': 'ONU_tot'}], 'visit': [1], 'ses': ['off']}
         ]
 
-        scatter_reg_plot(ppp_database, updrs_conf_ppp, sheets_ppp, results_folder_ppp, analysis_name, style="all", dataset="ppp", filterHandsTremorFlag=True)
-        scatter_reg_plot(drdr_database, updrs_conf_drdr, sheets_drdr, results_folder_drdr, analysis_name, style="all", dataset="drdr", filterHandsTremorFlag=True)
+        scatter_reg_plot(ppp_database, updrs_conf_ppp, sheets_ppp, results_folder_ppp, analysis_name, style="plotly", dataset="ppp", filterHandsTremorFlag=True)
+        scatter_reg_plot(drdr_database, updrs_conf_drdr, sheets_drdr, results_folder_drdr, analysis_name, style="plotly", dataset="drdr", filterHandsTremorFlag=True)
+
+        analysis_name = "scatter_plots_Basic_noFilter"
+        updrs_conf_ppp = [
+            {'x': [{'off': 'LEDD', 'on': 'LEDD'}], 'y': [
+                {'off': 'AvgBrady14Items', 'on': 'AvgBrady14Items'},
+                {'off': 'AvgLimbsRigidity5Items', 'on': 'AvgLimbsRigidity5Items'},
+                {'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'},
+                {'off': 'AvgTremorUPDRS', 'on': 'AvgTremorUPDRS'}
+            ], 'visit': [1], 'ses': ['off', 'on']},
+            {'x': [{'off': 'LEDD', 'on': 'LEDD'}], 'y': [
+                {'off': 'AvgBrady14Items', 'on': 'AvgBrady14Items'},
+                {'off': 'AvgLimbsRigidity5Items', 'on': 'AvgLimbsRigidity5Items'},
+                {'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'},
+                {'off': 'AvgTremorUPDRS', 'on': 'AvgTremorUPDRS'}
+            ], 'visit': [2], 'ses': ['off', 'on']},
+            {'x': [{'off': 'LEDD', 'on': 'LEDD'}], 'y': [
+                {'off': 'AvgBrady14Items', 'on': 'AvgBrady14Items'},
+                {'off': 'AvgLimbsRigidity5Items', 'on': 'AvgLimbsRigidity5Items'},
+                {'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'},
+                {'off': 'AvgTremorUPDRS', 'on': 'AvgTremorUPDRS'}
+            ], 'visit': [3], 'ses': ['off', 'on']}
+        ]
+        scatter_reg_plot_pChange(ppp_database, updrs_conf_ppp, sheets_ppp, results_folder_ppp, analysis_name, style="plotly", dataset="ppp", filterHandsTremorFlag=False, functionPerChange=percentage_change_Basic)
 
     """ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
     if plot_raincloud_flag:
         if run_local: print("----- PLOTTING RAINCLOUD PLOTS -----")
-        analysis_name = "raincloud_plots"
+        analysis_name = "raincloud_plots_Filter"
         updrs_conf_ppp = [
-            {'updrs': [{'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'}, {'off': 'AvgTotalU3', 'on': 'AvgTotalU3'}], 'visit': [1, 2], 'ses': ['off', 'on']},
-            {'updrs': [{'off': 'AvgBrady14Items', 'on': 'AvgBrady14Items'}, {'off': 'AvgTotalU3', 'on': 'AvgTotalU3'}], 'visit': [1, 2, 3], 'ses': ['off', 'on']}
+            {'updrs': [
+                {'off': 'AvgBrady14Items', 'on': 'AvgBrady14Items'}, 
+                {'off': 'AvgLimbsRigidity5Items', 'on': 'AvgLimbsRigidity5Items'},
+                {'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'},
+                {'off': 'AvgTremorUPDRS', 'on': 'AvgTremorUPDRS'}
+            ], 'visit': [1, 2, 3], 'ses': ['off', 'on']}
         ]
         updrs_conf_drdr = [
             {'updrs': [{'off': 'OFFTremorUPDRS', 'on': 'ONTremorUPDRS'}, {'off': 'OFFU_tot', 'on': 'ONU_tot'}], 'visit': [1], 'ses': ['off', 'on']}
@@ -908,8 +1234,8 @@ if __name__ == "__main__":
                 {'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'}
             ], 'visit': [1], 'ses': ['off', 'on'], 'type': "offon"}
         ]
-        pdf_plots(ppp_database, updrs_conf_ppp, sheets_ppp, results_folder_ppp, analysis_name, style="all", dataset="ppp", filterHandsTremorFlag=True)
-        pdf_plots(drdr_database, updrs_conf_drdr, sheets_drdr, results_folder_drdr, analysis_name, style="all", dataset="drdr", filterHandsTremorFlag=True)
+        pdf_plots(ppp_database, updrs_conf_ppp, sheets_ppp, results_folder_ppp, analysis_name, style="plotly", dataset="ppp", filterHandsTremorFlag=True)
+        pdf_plots(drdr_database, updrs_conf_drdr, sheets_drdr, results_folder_drdr, analysis_name, style="plotly", dataset="drdr", filterHandsTremorFlag=True)
 
     """ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
     if plot_coeffs_diff_flag:
@@ -936,3 +1262,39 @@ if __name__ == "__main__":
         ]
 
         create_stats_table(ppp_database, results_folder_ppp, analysis_name, sheets_ppp)
+
+    """ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
+    if plot_single_sub_trends_flag:
+        if run_local: print("----- PLOTTING MEANS DIFFERENCE -----")
+        analysis_name = "single_sub_trend"
+        updrs_conf_ppp = [
+            {'updrs': [{'off': 'AvgBrady14Items', 'on': 'AvgBrady14Items'}], 'visit': [1, 2, 3], 'ses': ['off', 'on']},
+            {'updrs': [{'off': 'AvgLimbsRigidity5Items', 'on': 'AvgLimbsRigidity5Items'}], 'visit': [1, 2, 3], 'ses': ['off', 'on']},
+            {'updrs': [{'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'}], 'visit': [1, 2, 3], 'ses': ['off', 'on']},
+            {'updrs': [{'off': 'AvgTremorUPDRS', 'on': 'AvgTremorUPDRS'}], 'visit': [1, 2, 3], 'ses': ['off', 'on']},
+            {'updrs': [
+                {'off': 'Brady14Items', 'on': 'Brady14Items'},
+                {'off': 'LimbsRigidity5Items', 'on': 'LimbsRigidity5Items'},
+                {'off': 'LimbsRestTrem', 'on': 'LimbsRestTrem'},
+                {'off': 'TremorUPDRS', 'on': 'TremorUPDRS'}
+            ], 'visit': [1, 2, 3], 'ses': ['off', 'on']},
+            {'updrs': [
+                {'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'},
+                {'off': 'LimbsRestTrem', 'on': 'LimbsRestTrem'},
+            ], 'visit': [1, 2, 3], 'ses': ['off', 'on']}
+        ]
+        updrs_conf_drdr = [
+            {'updrs': [{'off': 'AvgBrady14Items', 'on': 'AvgBrady14Items'}], 'visit': [1], 'ses': ['off', 'on']},
+            {'updrs': [{'off': 'AvgLimbsRigidity', 'on': 'AvgLimbsRigidity'}], 'visit': [1], 'ses': ['off', 'on']},
+            {'updrs': [{'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'}], 'visit': [1], 'ses': ['off', 'on']},
+            {'updrs': [{'off': 'OFFTremorUPDRS', 'on': 'ONTremorUPDRS'}], 'visit': [1], 'ses': ['off', 'on']},
+            {'updrs': [
+                {'off': 'Brady14Items', 'on': 'Brady14Items'},
+                {'off': 'Sum_L_Rig_OFF', 'on': 'SUM_L_Rig_on'},
+                {'off': 'UPDRS_OFF_L_RT', 'on': 'UPDRS_ON_L_RT'},
+                {'off': 'OFFTremorUPDRS', 'on': 'ONTremorUPDRS'}
+            ], 'visit': [1], 'ses': ['off', 'on']},
+        ]
+
+        single_sub_trend_plot(ppp_database, updrs_conf_ppp, sheets_ppp, results_folder_ppp, analysis_name, dataset="ppp", filterHandsTremorFlag=False)
+        single_sub_trend_plot(drdr_database, updrs_conf_drdr, sheets_drdr, results_folder_drdr, analysis_name, dataset="drdr", filterHandsTremorFlag=False)

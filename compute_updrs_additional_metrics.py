@@ -122,10 +122,12 @@ if __name__ == "__main__":
     ppp_database = sum_keys(ppp_database, [updrs_keys["FinalColumnsNames"][i] for i in [27, 28, 29, 30, 32]], "AvgLimbsRestTrem", averageFlag=True)
     ppp_database = sum_keys(ppp_database, updrs_keys["FinalColumnsNames"][3:7], "LimbsRigidity4Items")
     ppp_database = sum_keys(ppp_database, updrs_keys["FinalColumnsNames"][3:7], "AvgLimbsRigidity4Items", averageFlag=True)
-    ppp_database = sum_keys(ppp_database, updrs_keys["FinalColumnsNames"][2:7], "LimbsRigidity")
-    ppp_database = sum_keys(ppp_database, updrs_keys["FinalColumnsNames"][2:7], "AvgLimbsRigidity", averageFlag=True)
-    ppp_database = sum_keys(ppp_database, ["AvgBrady5Items", "AvgLimbsRigidity"], "AvgLimbsBradyRig", averageFlag=True)
-    ppp_database = sum_keys(ppp_database, ["Brady5Items", "LimbsRigidity"], "LimbsBradyRig")
+    ppp_database = sum_keys(ppp_database, updrs_keys["FinalColumnsNames"][2:7], "LimbsRigidity5Items")
+    ppp_database = sum_keys(ppp_database, updrs_keys["FinalColumnsNames"][2:7], "AvgLimbsRigidity5Items", averageFlag=True)
+    ppp_database = sum_keys(ppp_database, updrs_keys["FinalColumnsNames"][23:25], "PosturalTremor")
+    ppp_database = sum_keys(ppp_database, updrs_keys["FinalColumnsNames"][23:25], "AvgPosturalTremor", averageFlag=True)
+    ppp_database = sum_keys(ppp_database, ["AvgBrady5Items", "AvgLimbsRigidity5Items"], "AvgLimbsBradyRig", averageFlag=True)
+    ppp_database = sum_keys(ppp_database, ["Brady5Items", "LimbsRigidity5Items"], "LimbsBradyRig")
 
     """
     The metrics that I defined based on Zach's paper are:
@@ -133,8 +135,8 @@ if __name__ == "__main__":
     - AvgBrady14Items
     - LimbsRestTrem
     - AvgLimbsRestTrem
-    - LimbsRigidity
-    - AvgLimbsRigidity
+    - LimbsRigidity5Items
+    - AvgLimbsRigidity5Items
     The others are scores computed as 
     """
 
