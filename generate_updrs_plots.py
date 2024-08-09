@@ -2,12 +2,6 @@ import os
 import sys
 import copy
 from pathlib import Path
-
-import nibabel as nib
-import scipy as spy
-import glob
-import json
-import scipy.io
 import numpy as np
 import statsmodels.api as sm
 from statsmodels.formula.api import ols
@@ -21,9 +15,6 @@ import plotly.graph_objects as go
 import plotly.figure_factory as ff
 import matplotlib.pyplot as plt
 import matplotlib.collections as clt
-# import ptitprince as pt
-from matplotlib.ticker import PercentFormatter
-
 
 
 def percentage_change_Elble(ratingOn, ratingOff, alpha=0.5):
@@ -131,7 +122,7 @@ def create_histograms_for_pc(changes_data, updrs_key, visit, nbins, results_fold
             figure_name = os.path.join(results_folder, analysis_name, f"pc_{updrs_key}_visit{visit + 1}_sns.png")
         else:
             figure_name = os.path.join(results_folder, analysis_name, f"pc_{updrs_key}_{ses}_visits{visit[0]+1}-{visit[1]+1}_sns.png")
-        plt.savefig(figure_name)
+        plt.savefig(figure_name, bbox_inches='tight', dpi=300)
         plt.clf()
 
 
@@ -360,7 +351,7 @@ def scatter_reg_plot(database, conf_dicts, sheets, results_folder, analysis_name
                         figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}-{dataY['off']}_{timeName}_{sesName}_sns.png")
                     else:
                         figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}-{dataY['off']}_{sesName}_sns.png")
-                    plt.savefig(figure_name)
+                    plt.savefig(figure_name, bbox_inches='tight', dpi=300)
                     plt.clf()
 
         if len(confs['y']) > 1:
@@ -376,7 +367,7 @@ def scatter_reg_plot(database, conf_dicts, sheets, results_folder, analysis_name
                     figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}-{dataY['off']}_{timeName}_{sesName}_sns.png")
                 else:
                     figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}-{dataY['off']}_{sesName}_sns.png")
-                plt.savefig(figure_name)
+                plt.savefig(figure_name, bbox_inches='tight', dpi=300)
                 plt.clf()
 
     return 0
@@ -468,7 +459,7 @@ def scatter_reg_plot_pChange(database, conf_dicts, sheets, results_folder, analy
                             figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}-{dataY['off']}_{timeName}_{sesName}_sns.png")
                         else:
                             figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}-{dataY['off']}_{sesName}_sns.png")
-                        plt.savefig(figure_name)
+                        plt.savefig(figure_name, bbox_inches='tight', dpi=300)
                         plt.clf()
 
         if len(confs['y']) > 1:
@@ -484,7 +475,7 @@ def scatter_reg_plot_pChange(database, conf_dicts, sheets, results_folder, analy
                     figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}_{timeName}_{sesName}_sns.png")
                 else:
                     figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}_{sesName}_sns.png")
-                plt.savefig(figure_name)
+                plt.savefig(figure_name, bbox_inches='tight', dpi=300)
                 plt.clf()
     return 0
 
@@ -538,7 +529,7 @@ def pdf_plots(database, conf_dicts, sheets, results_folder, analysis_name, style
                         plt.ylabel('Density')
                         plt.legend(title='Sessions')
                         figure_name = os.path.join(results_folder, analysis_name, f"pdf_{dataX['off']}_OffOn_sns.png")
-                        plt.savefig(figure_name)
+                        plt.savefig(figure_name, bbox_inches='tight', dpi=300)
                         plt.clf()
             elif typeC == "longitudinal":
                 for ses in confs["ses"]:
@@ -589,7 +580,7 @@ def pdf_plots(database, conf_dicts, sheets, results_folder, analysis_name, style
                         plt.ylabel('Density')
                         plt.legend(title='Sessions')
                         figure_name = os.path.join(results_folder, analysis_name, f"pdf_{dataX['off']}_long_sns.png")
-                        plt.savefig(figure_name)
+                        plt.savefig(figure_name, bbox_inches='tight', dpi=300)
                         plt.clf()
             else:
                 raise ValueError("Select an appropriate type of plotting PDF: OFF-ON or Longitudinal comparisons.")
@@ -723,7 +714,7 @@ def raincloud_plot(data, updrs_conf, sheets, results_folder, analysis_name, data
                 figure_name = os.path.join(results_folder, analysis_name, f"rc_{key}_{timeName}_{sesName}_sns.png")
             else:
                 figure_name = os.path.join(results_folder, analysis_name, f"rc_{updrs_key['off']}-{updrs_key['on']}_{timeName}_{sesName}_sns.png")
-            plt.savefig(figure_name, bbox_inches='tight')
+            plt.savefig(figure_name, bbox_inches='tight', dpi=300)
             plt.clf()
             plt.close()
 
@@ -806,7 +797,7 @@ def coeffs_diff_plot(metric_function, metric_name, data, updrs_conf, sheets, res
             figure_name = os.path.join(results_folder, analysis_name, f"cd_{metric_name}_{nameUPDRSkeys}_{timeName}-{sesName}_sns.png")
         else:
             figure_name = os.path.join(results_folder, analysis_name, f"cd_{nameUPDRSkeys}_{sesName}_sns.png")
-        plt.savefig(figure_name, bbox_inches='tight')
+        plt.savefig(figure_name, bbox_inches='tight', dpi=300)
 
         plt.clf()
     return 0
@@ -817,8 +808,9 @@ def create_stats_table(dataO, results_folder, analysis_name, sheets, percentageC
     Path(os.path.join(results_folder, analysis_name)).mkdir(parents=True, exist_ok=True)
     stats_table = dict()
     stats_table["HandsTremorFiltered"] = pd.DataFrame()
-    stats_table["Complete97(No-NaNs)"] = pd.DataFrame()
+    stats_table["Complete(No-NaNs)"] = pd.DataFrame()
     stats_table["SampleMetrics"] = pd.DataFrame()
+    stats_table["DopamineResponsiveness"] = pd.DataFrame()
 
     # Get Idx for HandsTremorFiltered
     idx1 = filterHandsTremorOnly(database[sheets[0]], database[sheets[1]], "ppp")
@@ -828,36 +820,65 @@ def create_stats_table(dataO, results_folder, analysis_name, sheets, percentageC
     handsTremorFiltered = dict()
 
     # Set names for measurements
-    stats_table["Complete97(No-NaNs)"]["Clinical ratings and quantified measurements"] = [
+    stats_table["Complete(No-NaNs)"]["Clinical ratings and quantified measurements"] = [
         "MDS-UPDRS part III",
         "MDS-UPDRS-Brad",
         "MDS-UPDRS-Rig",
-        "MDS-UPDRS-Trem"
+        "MDS-UPDRS-Trem",
+        "Tremor power, rest, uV2"
     ]
     stats_table["HandsTremorFiltered"]["Clinical ratings and quantified measurements"] = [
         "MDS-UPDRS part III",
         "MDS-UPDRS-Brad",
         "MDS-UPDRS-Rig",
-        "MDS-UPDRS-Trem"
+        "MDS-UPDRS-Trem",
+        "Tremor power, rest, uV2"
     ]
 
+    stats_table["DopamineResponsiveness"]["Clinical ratings"] = [
+        "MDS-UPDRS part III, mean (range)",
+        "MDS-UPDRS-Brad, mean (range)",
+        "MDS-UPDRS-Rig, mean (range)",
+        "MDS-UPDRS-Trem, mean (range)"
+    ]
+    names_columns = ["Baseline", "Year 1", "Year 2"]
+    for i, name in enumerate(names_columns):
+        stats_table["DopamineResponsiveness"][name] = [
+            f"{np.mean(database[sheets[2*i]]['ResponseTotalU3']):.3f} ({np.min(database[sheets[2*i]]['ResponseTotalU3']):.3f}-{np.max(database[sheets[2*i]]['ResponseTotalU3']):.3f})",
+            f"{np.mean(database[sheets[2*i]]['ResponseBrady14Items']):.3f} ({np.min(database[sheets[2*i]]['ResponseBrady14Items']):.3f}-{np.max(database[sheets[2*i]]['ResponseBrady14Items']):.3f})",
+            f"{np.mean(database[sheets[2*i]]['ResponseLimbsRigidity5Items']):.3f} ({np.min(database[sheets[2*i]]['ResponseLimbsRigidity5Items']):.3f}-{np.max(database[sheets[2*i]]['ResponseLimbsRigidity5Items']):.3f})",
+            f"{np.mean(database[sheets[2*i]]['ResponseLimbsRestTrem']):.3f} ({np.min(database[sheets[2*i]]['ResponseLimbsRestTrem']):.3f}-{np.max(database[sheets[2*i]]['ResponseLimbsRestTrem']):.3f})",
+        ]
+    p_value_names = ["p-value Baseline-Year1", "p-value Baseline-Year2", "p-value Year1-Year2"]
+    sheet_pairs = [[0, 2], [0, 4], [2, 4]]
+    for i, name in enumerate(p_value_names):
+        stats_table["DopamineResponsiveness"][name] = [
+            independent_ttest(database[sheets[sheet_pairs[i][0]]]["ResponseTotalU3"], database[sheets[sheet_pairs[i][1]]]["ResponseTotalU3"]),
+            independent_ttest(database[sheets[sheet_pairs[i][0]]]["ResponseBrady14Items"], database[sheets[sheet_pairs[i][1]]]["ResponseBrady14Items"]),
+            independent_ttest(database[sheets[sheet_pairs[i][0]]]["ResponseLimbsRigidity5Items"], database[sheets[sheet_pairs[i][1]]]["ResponseLimbsRigidity5Items"]),
+            independent_ttest(database[sheets[sheet_pairs[i][0]]]["ResponseLimbsRestTrem"], database[sheets[sheet_pairs[i][1]]]["ResponseLimbsRestTrem"])
+        ]
+
     # For the population metrics table
-    stats_table["SampleMetrics"]["Metric name (first visit)"] = [
-        "Age, y",
-        "Sex, M/F",
-        "H&Y stage, median",
-        "Disease duration, y",
-        "LED",
-    ]
-    # This scores are for participants that have data, no filtering yet
-    stats_table["SampleMetrics"]["Values"] = [
-        f"{np.mean(database[sheets[0]]['Age']):.3f} ({np.min(database[sheets[0]]['Age'])}-{np.max(database[sheets[0]]['Age'])})",
-        f"{(database[sheets[0]]['Gender'] == 1).sum()}/{(database[sheets[0]]['Gender'] == 2).sum()}",
-        f"{np.median(database[sheets[0]]['HoeYah'])} ({np.min(database[sheets[0]]['HoeYah'])}-{np.max(database[sheets[0]]['HoeYah'])})",
-        f"{np.mean(database[sheets[0]]['MonthSinceDiag'])/12:.3f} ({np.min(database[sheets[0]]['MonthSinceDiag'])/12:.3f} - {np.max(database[sheets[0]]['MonthSinceDiag'])/12:.3f})",
-        f"{np.mean(database[sheets[0]]['LEDD']):.3f} ({np.min(database[sheets[0]]['LEDD']):.3f}-{np.max(database[sheets[0]]['LEDD']):.3f})"
-    ]
-    # FOr all the other metrics table
+    visit_names = ["Baseline", "Year 1", "Year 2"]
+    for i, visit_name in enumerate(visit_names):
+        stats_table["SampleMetrics"][f"Metric for {visit_name}"] = [
+            "Age, y",
+            "Sex, M/F",
+            "H&Y stage, median",
+            "Disease duration, y",
+            "LED",
+        ]
+        # This scores are for participants that have data, no filtering yet
+        stats_table["SampleMetrics"][f"Values for {visit_name}"] = [
+            f"{np.mean(database[sheets[2*i]]['Age']):.3f} ({np.min(database[sheets[2*i]]['Age'])}-{np.max(database[sheets[2*i]]['Age'])})",
+            f"{(database[sheets[2*i]]['Gender'] == 1).sum()}/{(database[sheets[2*i]]['Gender'] == 2).sum()}",
+            f"{np.median(database[sheets[2*i]]['HoeYah'])} ({np.min(database[sheets[2*i]]['HoeYah'])}-{np.max(database[sheets[2*i]]['HoeYah'])})",
+            f"{np.mean(database[sheets[2*i]]['MonthSinceDiag'])/12:.3f} ({np.min(database[sheets[2*i]]['MonthSinceDiag'])/12:.3f} - {np.max(database[sheets[2*i]]['MonthSinceDiag'])/12:.3f})",
+            f"{np.mean(database[sheets[2*i]]['LEDD']):.3f} ({np.min(database[sheets[2*i]]['LEDD']):.3f}-{np.max(database[sheets[2*i]]['LEDD']):.3f})"
+        ]
+
+    # For all the other metrics table
     for sheet, data in database.items():
         handsTremorFiltered[sheet] = data.iloc[list(idxCommon)].reset_index(drop=True)
 
@@ -870,8 +891,10 @@ def create_stats_table(dataO, results_folder, analysis_name, sheets, percentageC
         rigi_F = create_string_mean_std(handsTremorFiltered[sheet]["LimbsRigidity5Items"])
         tremor_C = create_string_mean_std(database[sheet]["LimbsRestTrem"])
         tremor_F = create_string_mean_std(handsTremorFiltered[sheet]["LimbsRestTrem"])
-        stats_table["Complete97(No-NaNs)"][sheet] = [totalsU3_C, brady_C, rigi_C, tremor_C]
-        stats_table["HandsTremorFiltered"][sheet] = [totalsU3_F, brady_F, rigi_F, tremor_F]
+        power_C = create_string_mean_std(database[sheet]["LogPower"])
+        power_F = create_string_mean_std(handsTremorFiltered[sheet]["LogPower"])
+        stats_table["Complete(No-NaNs)"][sheet] = [totalsU3_C, brady_C, rigi_C, tremor_C, power_C]
+        stats_table["HandsTremorFiltered"][sheet] = [totalsU3_F, brady_F, rigi_F, tremor_F, power_F]
 
         if i in [1, 3, 5]:
             pcU3_C = create_string_mean_std(percentageChangeFunction(database[sheets[i]]["TotalU3"], database[sheets[i-1]]["TotalU3"], alpha=0.5))
@@ -882,8 +905,8 @@ def create_stats_table(dataO, results_folder, analysis_name, sheets, percentageC
             pcRigi_F = create_string_mean_std(percentageChangeFunction(handsTremorFiltered[sheets[i]]["LimbsRigidity5Items"], handsTremorFiltered[sheets[i - 1]]["LimbsRigidity5Items"], alpha=0.5))
             pcTremor_C = create_string_mean_std(percentageChangeFunction(database[sheets[i]]["LimbsRestTrem"], database[sheets[i - 1]]["LimbsRestTrem"], alpha=0.5))
             pcTremor_F = create_string_mean_std(percentageChangeFunction(handsTremorFiltered[sheets[i]]["LimbsRestTrem"], handsTremorFiltered[sheets[i - 1]]["LimbsRestTrem"], alpha=0.5))
-            stats_table["Complete97(No-NaNs)"][f"% Change {i}"] = [pcU3_C, pcBrady_C, pcRigi_C, pcTremor_C]
-            stats_table["HandsTremorFiltered"][f"% Change {i}"] = [pcU3_F, pcBrady_F, pcRigi_F, pcTremor_F]
+            stats_table["Complete(No-NaNs)"][f"% Change {i}"] = [pcU3_C, pcBrady_C, pcRigi_C, pcTremor_C, "NA"]
+            stats_table["HandsTremorFiltered"][f"% Change {i}"] = [pcU3_F, pcBrady_F, pcRigi_F, pcTremor_F, "NA"]
 
             # Mean diff and CI
             u3C = create_string_meandiff_ci(database[sheets[i]]["TotalU3"], database[sheets[i-1]]["TotalU3"])
@@ -894,8 +917,8 @@ def create_stats_table(dataO, results_folder, analysis_name, sheets, percentageC
             rigiF = create_string_meandiff_ci(handsTremorFiltered[sheets[i]]["LimbsRigidity5Items"], handsTremorFiltered[sheets[i - 1]]["LimbsRigidity5Items"])
             tremorC = create_string_meandiff_ci(database[sheets[i]]["LimbsRestTrem"], database[sheets[i - 1]]["LimbsRestTrem"])
             tremorF = create_string_meandiff_ci(handsTremorFiltered[sheets[i]]["LimbsRestTrem"], handsTremorFiltered[sheets[i - 1]]["LimbsRestTrem"])
-            stats_table["Complete97(No-NaNs)"][f"MeansDiff (CI) {i}"] = [u3C, bradyC, rigiC, tremorC]
-            stats_table["HandsTremorFiltered"][f"MeansDiff (CI) {i}"] = [u3F, bradyF, rigiF, tremorF]
+            stats_table["Complete(No-NaNs)"][f"MeansDiff (CI) {i}"] = [u3C, bradyC, rigiC, tremorC, "NA"]
+            stats_table["HandsTremorFiltered"][f"MeansDiff (CI) {i}"] = [u3F, bradyF, rigiF, tremorF, "NA"]
 
             # Cohen's d and CI
             u3C = create_string_cohen_d_ci(database[sheets[i]]["TotalU3"], database[sheets[i - 1]]["TotalU3"])
@@ -906,8 +929,8 @@ def create_stats_table(dataO, results_folder, analysis_name, sheets, percentageC
             rigiF = create_string_cohen_d_ci(handsTremorFiltered[sheets[i]]["LimbsRigidity5Items"], handsTremorFiltered[sheets[i - 1]]["LimbsRigidity5Items"])
             tremorC = create_string_cohen_d_ci(database[sheets[i]]["LimbsRestTrem"], database[sheets[i - 1]]["LimbsRestTrem"])
             tremorF = create_string_cohen_d_ci(handsTremorFiltered[sheets[i]]["LimbsRestTrem"], handsTremorFiltered[sheets[i - 1]]["LimbsRestTrem"])
-            stats_table["Complete97(No-NaNs)"][f"Cohen's d (CI) {i}"] = [u3C, bradyC, rigiC, tremorC]
-            stats_table["HandsTremorFiltered"][f"Cohen's d (CI) {i}"] = [u3F, bradyF, rigiF, tremorF]
+            stats_table["Complete(No-NaNs)"][f"Cohen's d (CI) {i}"] = [u3C, bradyC, rigiC, tremorC, "NA"]
+            stats_table["HandsTremorFiltered"][f"Cohen's d (CI) {i}"] = [u3F, bradyF, rigiF, tremorF, "NA"]
 
             # p-value
             u3C = paired_ttest(database[sheets[i]]["TotalU3"], database[sheets[i - 1]]["TotalU3"])
@@ -918,8 +941,46 @@ def create_stats_table(dataO, results_folder, analysis_name, sheets, percentageC
             rigiF = paired_ttest(handsTremorFiltered[sheets[i]]["LimbsRigidity5Items"], handsTremorFiltered[sheets[i - 1]]["LimbsRigidity5Items"])
             tremorC = paired_ttest(database[sheets[i]]["LimbsRestTrem"], database[sheets[i - 1]]["LimbsRestTrem"])
             tremorF = paired_ttest(handsTremorFiltered[sheets[i]]["LimbsRestTrem"], handsTremorFiltered[sheets[i - 1]]["LimbsRestTrem"])
-            stats_table["Complete97(No-NaNs)"][f"p-value {i}"] = [u3C, bradyC, rigiC, tremorC]
-            stats_table["HandsTremorFiltered"][f"p-value {i}"] = [u3F, bradyF, rigiF, tremorF]
+            stats_table["Complete(No-NaNs)"][f"p-value {i}"] = [u3C, bradyC, rigiC, tremorC, "NA"]
+            stats_table["HandsTremorFiltered"][f"p-value {i}"] = [u3F, bradyF, rigiF, tremorF, "NA"]
+
+    p_value_names = ["p-value Baseline-Year1 OFF", "p-value Baseline-Year2 OFF", "p-value Year1-Year2 OFF",
+                     "p-value Baseline-Year1 ON", "p-value Baseline-Year2 ON", "p-value Year1-Year2 ON"]
+    sheet_pairs = [[0, 2], [0, 4], [2, 4], [1, 3], [1, 5], [3, 5]]
+    for i, name in enumerate(p_value_names):
+        stats_table["Complete(No-NaNs)"][name] = [
+            independent_ttest(database[sheets[sheet_pairs[i][0]]]["TotalU3"], database[sheets[sheet_pairs[i][1]]]["TotalU3"]),
+            independent_ttest(database[sheets[sheet_pairs[i][0]]]["Brady14Items"], database[sheets[sheet_pairs[i][1]]]["Brady14Items"]),
+            independent_ttest(database[sheets[sheet_pairs[i][0]]]["LimbsRigidity5Items"], database[sheets[sheet_pairs[i][1]]]["LimbsRigidity5Items"]),
+            independent_ttest(database[sheets[sheet_pairs[i][0]]]["LimbsRestTrem"], database[sheets[sheet_pairs[i][1]]]["LimbsRestTrem"]),
+            "NA"
+        ]
+        stats_table["HandsTremorFiltered"][name] = [
+            independent_ttest(handsTremorFiltered[sheets[sheet_pairs[i][0]]]["TotalU3"], handsTremorFiltered[sheets[sheet_pairs[i][1]]]["TotalU3"]),
+            independent_ttest(handsTremorFiltered[sheets[sheet_pairs[i][0]]]["Brady14Items"], handsTremorFiltered[sheets[sheet_pairs[i][1]]]["Brady14Items"]),
+            independent_ttest(handsTremorFiltered[sheets[sheet_pairs[i][0]]]["LimbsRigidity5Items"], handsTremorFiltered[sheets[sheet_pairs[i][1]]]["LimbsRigidity5Items"]),
+            independent_ttest(handsTremorFiltered[sheets[sheet_pairs[i][0]]]["LimbsRestTrem"], handsTremorFiltered[sheets[sheet_pairs[i][1]]]["LimbsRestTrem"]),
+            "NA"
+        ]
+
+    p_value_names = ["cohen's d Baseline-Year1 OFF", "cohen's d Baseline-Year2 OFF", "cohen's d Year1-Year2 OFF",
+                     "cohen's d Baseline-Year1 ON", "cohen's d Baseline-Year2 ON", "cohen's d Year1-Year2 ON"]
+    sheet_pairs = [[0, 2], [0, 4], [2, 4], [1, 3], [1, 5], [3, 5]]
+    for i, name in enumerate(p_value_names):
+        stats_table["Complete(No-NaNs)"][name] = [
+            create_string_cohen_d_ci(database[sheets[sheet_pairs[i][0]]]["TotalU3"], database[sheets[sheet_pairs[i][1]]]["TotalU3"]),
+            create_string_cohen_d_ci(database[sheets[sheet_pairs[i][0]]]["Brady14Items"], database[sheets[sheet_pairs[i][1]]]["Brady14Items"]),
+            create_string_cohen_d_ci(database[sheets[sheet_pairs[i][0]]]["LimbsRigidity5Items"], database[sheets[sheet_pairs[i][1]]]["LimbsRigidity5Items"]),
+            create_string_cohen_d_ci(database[sheets[sheet_pairs[i][0]]]["LimbsRestTrem"], database[sheets[sheet_pairs[i][1]]]["LimbsRestTrem"]),
+            "NA"
+        ]
+        stats_table["HandsTremorFiltered"][name] = [
+            create_string_cohen_d_ci(handsTremorFiltered[sheets[sheet_pairs[i][0]]]["TotalU3"], handsTremorFiltered[sheets[sheet_pairs[i][1]]]["TotalU3"]),
+            create_string_cohen_d_ci(handsTremorFiltered[sheets[sheet_pairs[i][0]]]["Brady14Items"], handsTremorFiltered[sheets[sheet_pairs[i][1]]]["Brady14Items"]),
+            create_string_cohen_d_ci(handsTremorFiltered[sheets[sheet_pairs[i][0]]]["LimbsRigidity5Items"], handsTremorFiltered[sheets[sheet_pairs[i][1]]]["LimbsRigidity5Items"]),
+            create_string_cohen_d_ci(handsTremorFiltered[sheets[sheet_pairs[i][0]]]["LimbsRestTrem"], handsTremorFiltered[sheets[sheet_pairs[i][1]]]["LimbsRestTrem"]),
+            "NA"
+        ]
 
     with pd.ExcelWriter(os.path.join(results_folder, analysis_name, "table_summary_stats.xlsx"), engine='openpyxl') as writer:
         for sheet_name, data in stats_table.items():
@@ -1008,6 +1069,12 @@ def paired_ttest(data1, data2):
     return f"{p_value:.5f}"
 
 
+def independent_ttest(data1, data2):
+    # Perform the independent t-test
+    t_stat, p_value = stats.ttest_ind(data1, data2, equal_var=False)  # Use Welch's t-test by default
+    return f"{p_value:.5f}"
+
+
 def single_sub_trend_plot(data, updrs_conf, sheets, results_folder, analysis_name, dataset="ppp", filterHandsTremorFlag=True):
     # Instead of group I have sub-ID
     database = copy.deepcopy(data)
@@ -1018,10 +1085,10 @@ def single_sub_trend_plot(data, updrs_conf, sheets, results_folder, analysis_nam
     dhue = subIDKey
 
     for confs in updrs_conf:
-        plt.figure(figsize=(10, 6))
         df = {}
         df[dx] = pd.Series(dtype='str')
         df[dhue] = pd.Series(dtype='str')
+        meansTest = []
         updrs_keys = confs["updrs"]
         if len(updrs_keys)>1:
             nameUPDRSkeys = ""
@@ -1055,6 +1122,8 @@ def single_sub_trend_plot(data, updrs_conf, sheets, results_folder, analysis_nam
                 else:
                     df[key] = data_series
 
+                meansTest.append(np.mean(data_series))
+
             lengthData = len(data_series)
 
             visit_label = {
@@ -1077,34 +1146,64 @@ def single_sub_trend_plot(data, updrs_conf, sheets, results_folder, analysis_nam
         cleaned = cleanNaNRowsifAnyMult(df[key], df[dx], df[dhue])
         df[key], df[dx], df[dhue] = cleaned[0], cleaned[1], cleaned[2]
 
+        # Without mean lines
+        # df_melted = df.melt(id_vars=[dx, dhue], var_name='UPDRS', value_name='value')
+        # g = sns.FacetGrid(df_melted, col='UPDRS', hue=dhue, sharey=False, height=5, aspect=1.5)
+        # g.map_dataframe(plot_individual_lines, dx=dx, dhue=dhue, linewidth=1)
+        # g.set_axis_labels(dx, "UPDRS Score")
+        # g.set_titles("{col_name}")
+
+        # To add Mean lines
         df_melted = df.melt(id_vars=[dx, dhue], var_name='UPDRS', value_name='value')
         g = sns.FacetGrid(df_melted, col='UPDRS', hue=dhue, sharey=False, height=5, aspect=1.5)
-        g.map_dataframe(plot_individual_lines, dx=dx, dhue=dhue)
-        # g.add_legend(title=dhue)
+        dataMeans = df_melted.groupby([dx, 'UPDRS']).agg(mean_value=('value', 'mean')).reset_index()
+        g.map_dataframe(plot_individual_lines2, dx=dx, dhue=dhue, dataMeans=dataMeans, linewidth=1)
         g.set_axis_labels(dx, "UPDRS Score")
         g.set_titles("{col_name}")
+        for ax in g.axes.flatten():
+            ax.grid(True)
 
-        # Perform ANOVA for each measurement
-        # for measurement in df_melted['UPDRS'].unique():
-        #     formula = f'value ~ C({dx}) + C({dhue}) + C({dx}):C({dhue})'
-        #     model = ols(formula, data=df_melted[df_melted['UPDRS'] == measurement]).fit()
-        #     anova_table = sm.stats.anova_lm(model, typ=2)
-        #     anova_table.to_excel(os.path.join(results_folder, analysis_name, f"ANOVA results for {measurement}_{timeName}-{sesName}.xlsx"), engine='openpyxl', index=True)
 
         if dataset == "ppp":
             figure_name = os.path.join(results_folder, analysis_name, f"cd_{nameUPDRSkeys}_{timeName}-{sesName}_sns.png")
         else:
             figure_name = os.path.join(results_folder, analysis_name, f"cd_{nameUPDRSkeys}_{sesName}_sns.png")
-        plt.savefig(figure_name, bbox_inches='tight')
+        plt.savefig(figure_name, bbox_inches='tight', dpi=300)
 
         plt.clf()
+        plt.close()
     return 0
 
 
-def plot_individual_lines(data, dx, dhue, **kwargs):
+def plot_individual_lines(data, dx, dhue, linewidth, **kwargs):
     participants = data[dhue].unique()
     for participant in participants:
-        sns.lineplot(data=data[data[dhue] == participant], x=dx, y='value', errorbar=None, marker='o', **kwargs)
+        sns.lineplot(data=data[data[dhue] == participant], x=dx, y='value', errorbar=None, marker='o', linewidth=linewidth, **kwargs)
+
+
+def plot_individual_lines2(data, dx, dhue, dataMeans=None, linewidth=1.5, mean_line_color='black', mean_line_thickness=2, **kwargs):
+    ax = plt.gca()
+    # Plot individual lines
+    participants = data[dhue].unique()
+    for participant in participants:
+        sns.lineplot(data=data[data[dhue] == participant], x=dx, y='value',
+                     errorbar=None, marker='o', linewidth=linewidth, ax=ax, **kwargs)
+
+    # Plot mean line if provided
+    offset = (np.max(dataMeans["mean_value"])-np.min(dataMeans["mean_value"]))/5
+    if dataMeans is not None:
+        for updrs in data['UPDRS'].unique():
+            mean_data = dataMeans[(dataMeans['UPDRS'] == updrs) & (dataMeans[dx].isin(data[dx].unique()))]
+            ax.plot(mean_data[dx], mean_data['mean_value'], color=mean_line_color, linewidth=mean_line_thickness,
+                    label='Mean', linestyle='--', marker='s', markersize=5)
+
+            for _, row in mean_data.iterrows():
+                ax.text(row[dx], row['mean_value']+offset, f"{row['mean_value']:.3f}", color='black',
+                        ha='center', va='bottom', fontsize=9)
+
+    ax.set_xlabel(dx)
+    ax.set_ylabel('UPDRS Score')
+    ax.set_title(ax.get_title())
 
 
 if __name__ == "__main__":
@@ -1114,11 +1213,11 @@ if __name__ == "__main__":
     # Paths
     base_PPP_folder = "/project/3024023.01/PPP-POM_cohort/"
     results_folder_ppp = "/project/3024023.01/PPP-POM_cohort/updrs_analysis/"
-    path_to_ppp_data_reduced = os.path.join(base_PPP_folder, "updrs_analysis", "ppp_updrs_database_consistent_subjects.xlsx")
+    path_to_ppp_data_reduced = os.path.join(base_PPP_folder, "updrs_analysis", "ppp_updrs_database_consistent_subjects_by_visit.xlsx")
 
     base_drdr_folder = "/project/3024023.01/fMRI_DRDR/"
     results_folder_drdr = "/project/3024023.01/fMRI_DRDR/updrs_analysis/"
-    path_to_drdr_data = os.path.join(base_drdr_folder, "updrs_analysis", "DRDR_Results_clean.xlsx")
+    path_to_drdr_data = os.path.join(base_drdr_folder, "updrs_analysis", "DRDR_Results_clean_complete.xlsx")
 
     if run_local: print("----- LOADING DATABASE PPP -----")
     excel_file_ppp = pd.ExcelFile(path_to_ppp_data_reduced)
@@ -1151,9 +1250,10 @@ if __name__ == "__main__":
         analysis_name = "Percentage-Change-Basic_noFilter"
         visits_ppp = [1, 2, 3]
         visits_drdr = [1]  # ["UPDRS ON", "UPDRS OFF"]
-        updrs_keys_ppp = ["AvgLimbsRestTrem", "AvgTremorUPDRS", "TremorUPDRS", "PosturalTremor", "AvgBrady14Items", "AvgBrady5Items", "AvgLimbsRigidity5Items", "AvgLimbsRigidity4Items", "AvgTotalU3", "TotalU3"]
-        updrs_keys_drdr = ["AvgLimbsRestTrem", "AvgBrady14Items", "AvgLimbsRigidity", ["OFFU_tot", "ONU_tot"]]
-
+        # updrs_keys_ppp = ["AvgLimbsRestTrem", "AvgTremorUPDRS", "TremorUPDRS", "PosturalTremor", "AvgBrady14Items", "AvgBrady5Items", "AvgLimbsRigidity5Items", "AvgLimbsRigidity4Items", "AvgTotalU3", "TotalU3"]
+        updrs_keys_ppp = ["ResponseTotalU3", "ResponseTremorUPDRS", "ResponseLimbsRestTrem", "ResponseBrady14Items", "ResponseLimbsRigidity5Items"]
+        # updrs_keys_drdr = ["AvgLimbsRestTrem", "AvgBrady14Items", "AvgLimbsRigidity", ["OFFU_tot", "ONU_tot"]]
+        updrs_keys_drdr = ["ResponseTotalU3", "ResponseTremorUPDRS", "ResponseLimbsRestTrem", "ResponseBrady14Items", "ResponseLimbsRigidity5Items"]
         percentage_change_plot(ppp_database, updrs_keys_ppp, visits_ppp, sheets_ppp, results_folder_ppp, analysis_name, style="plotly", dataset="ppp", typeC="offon", filterHandsTremorFlag=False, includeGaussianCurve = True, functionPerChange = percentage_change_Basic)
         percentage_change_plot(ppp_database, updrs_keys_ppp, visits_ppp, sheets_ppp, results_folder_ppp, analysis_name, style="plotly", dataset="ppp", typeC="longitudinal", filterHandsTremorFlag=False, includeGaussianCurve=True, functionPerChange = percentage_change_Basic)
         percentage_change_plot(drdr_database, updrs_keys_drdr, visits_drdr, sheets_drdr, results_folder_drdr, analysis_name, style="plotly", dataset="drdr", typeC="offon", filterHandsTremorFlag=False, includeGaussianCurve = True, functionPerChange = percentage_change_Basic)
@@ -1161,7 +1261,7 @@ if __name__ == "__main__":
     """ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
     if plot_scatter_correlation_flag:
         if run_local: print("----- PLOTTING SCATTER PLOTS AND CORRELATION -----")
-        analysis_name = "scatter_plots_Filter"
+        analysis_name = "scatter_plots_noFilter"
         updrs_conf_ppp = [
             {'x': [{'off': 'LEDD', 'on': 'LEDD'}], 'y': [
                 {'off': 'AvgBrady14Items', 'on': 'AvgBrady14Items'},
@@ -1172,14 +1272,16 @@ if __name__ == "__main__":
             {'x': [{'off': 'LEDD', 'on': 'LEDD'}], 'y': [{'off': 'AvgBrady14Items', 'on': 'AvgBrady14Items'}], 'visit': [1, 2, 3], 'ses': ['off', 'on']},
             {'x': [{'off': 'LEDD', 'on': 'LEDD'}], 'y': [{'off': 'AvgLimbsRigidity5Items', 'on': 'AvgLimbsRigidity5Items'}], 'visit': [1, 2, 3], 'ses': ['off', 'on']},
             {'x': [{'off': 'LEDD', 'on': 'LEDD'}], 'y': [{'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'}], 'visit': [1, 2, 3], 'ses': ['off', 'on']},
-            {'x': [{'off': 'LEDD', 'on': 'LEDD'}], 'y': [{'off': 'AvgTremorUPDRS', 'on': 'AvgTremorUPDRS'}], 'visit': [1, 2, 3], 'ses': ['off', 'on']}
+            {'x': [{'off': 'LEDD', 'on': 'LEDD'}], 'y': [{'off': 'AvgTremorUPDRS', 'on': 'AvgTremorUPDRS'}], 'visit': [1, 2, 3], 'ses': ['off', 'on']},
+            {'x': [{'off': 'LogPower', 'on': 'LogPower'}], 'y': [{'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'}], 'visit': [1], 'ses': ['off']},
+            {'x': [{'off': 'LogPower', 'on': 'LogPower'}], 'y': [{'off': 'FreqPeak', 'on': 'FreqPeak'}], 'visit': [1], 'ses': ['off']}
         ]
         updrs_conf_drdr = [
             {'x': [{'off': 'OFFTremorUPDRS', 'on': 'ONTremorUPDRS'}], 'y': [{'off': 'OFFU_tot', 'on': 'ONU_tot'}], 'visit': [1], 'ses': ['off', 'on']},
             {'x': [{'off': 'OFFTremorUPDRS', 'on': 'ONTremorUPDRS'}], 'y': [{'off': 'OFFU_tot', 'on': 'ONU_tot'}], 'visit': [1], 'ses': ['off']}
         ]
 
-        scatter_reg_plot(ppp_database, updrs_conf_ppp, sheets_ppp, results_folder_ppp, analysis_name, style="plotly", dataset="ppp", filterHandsTremorFlag=True)
+        scatter_reg_plot(ppp_database, updrs_conf_ppp, sheets_ppp, results_folder_ppp, analysis_name, style="plotly", dataset="ppp", filterHandsTremorFlag=False)
         scatter_reg_plot(drdr_database, updrs_conf_drdr, sheets_drdr, results_folder_drdr, analysis_name, style="plotly", dataset="drdr", filterHandsTremorFlag=True)
 
         analysis_name = "scatter_plots_Basic_noFilter"
@@ -1201,28 +1303,44 @@ if __name__ == "__main__":
                 {'off': 'AvgLimbsRigidity5Items', 'on': 'AvgLimbsRigidity5Items'},
                 {'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'},
                 {'off': 'AvgTremorUPDRS', 'on': 'AvgTremorUPDRS'}
-            ], 'visit': [3], 'ses': ['off', 'on']}
+            ], 'visit': [3], 'ses': ['off', 'on']},
+            {'x': [{'off': 'LogPower', 'on': 'LogPower'}], 'y': [
+                {'off': 'AvgBrady14Items', 'on': 'AvgBrady14Items'},
+                {'off': 'AvgLimbsRigidity5Items', 'on': 'AvgLimbsRigidity5Items'},
+                {'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'},
+                {'off': 'AvgTremorUPDRS', 'on': 'AvgTremorUPDRS'}
+            ], 'visit': [1], 'ses': ['off', 'on']},
+            {'x': [{'off': 'FreqPeak', 'on': 'FreqPeak'}], 'y': [
+                {'off': 'AvgBrady14Items', 'on': 'AvgBrady14Items'},
+                {'off': 'AvgLimbsRigidity5Items', 'on': 'AvgLimbsRigidity5Items'},
+                {'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'},
+                {'off': 'AvgTremorUPDRS', 'on': 'AvgTremorUPDRS'}
+            ], 'visit': [1], 'ses': ['off', 'on']},
+            {'x': [{'off': 'LogPower', 'on': 'LogPower'}], 'y': [{'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'}],
+             'visit': [1], 'ses': ['off']},
         ]
         scatter_reg_plot_pChange(ppp_database, updrs_conf_ppp, sheets_ppp, results_folder_ppp, analysis_name, style="plotly", dataset="ppp", filterHandsTremorFlag=False, functionPerChange=percentage_change_Basic)
 
     """ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
     if plot_raincloud_flag:
         if run_local: print("----- PLOTTING RAINCLOUD PLOTS -----")
-        analysis_name = "raincloud_plots_Filter"
+        analysis_name = "raincloud_plots_noFilter"
         updrs_conf_ppp = [
             {'updrs': [
                 {'off': 'AvgBrady14Items', 'on': 'AvgBrady14Items'}, 
                 {'off': 'AvgLimbsRigidity5Items', 'on': 'AvgLimbsRigidity5Items'},
                 {'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'},
-                {'off': 'AvgTremorUPDRS', 'on': 'AvgTremorUPDRS'}
+                {'off': 'AvgTremorUPDRS', 'on': 'AvgTremorUPDRS'},
+                {'off': 'AvgKineticTremor', 'on': 'AvgKineticTremor'},
+                {'off': 'AvgPosturalTremor', 'on': 'AvgPosturalTremor'}
             ], 'visit': [1, 2, 3], 'ses': ['off', 'on']}
         ]
         updrs_conf_drdr = [
             {'updrs': [{'off': 'OFFTremorUPDRS', 'on': 'ONTremorUPDRS'}, {'off': 'OFFU_tot', 'on': 'ONU_tot'}], 'visit': [1], 'ses': ['off', 'on']}
         ]
 
-        raincloud_plot(ppp_database, updrs_conf_ppp, sheets_ppp, results_folder_ppp, analysis_name, dataset="ppp", filterHandsTremorFlag=True)
-        raincloud_plot(drdr_database, updrs_conf_drdr, sheets_drdr, results_folder_drdr, analysis_name, dataset="drdr", filterHandsTremorFlag=True)
+        raincloud_plot(ppp_database, updrs_conf_ppp, sheets_ppp, results_folder_ppp, analysis_name, dataset="ppp", filterHandsTremorFlag=False)
+        raincloud_plot(drdr_database, updrs_conf_drdr, sheets_drdr, results_folder_drdr, analysis_name, dataset="drdr", filterHandsTremorFlag=False)
 
     """ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
     if plot_pdf_flag:
@@ -1303,3 +1421,6 @@ if __name__ == "__main__":
 
         single_sub_trend_plot(ppp_database, updrs_conf_ppp, sheets_ppp, results_folder_ppp, analysis_name, dataset="ppp", filterHandsTremorFlag=False)
         single_sub_trend_plot(drdr_database, updrs_conf_drdr, sheets_drdr, results_folder_drdr, analysis_name, dataset="drdr", filterHandsTremorFlag=False)
+
+
+        sys.exit()

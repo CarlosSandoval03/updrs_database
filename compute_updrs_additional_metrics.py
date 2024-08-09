@@ -4,6 +4,8 @@ import sys
 import numpy as np
 import pandas as pd
 
+import scipy.io as sio
+
 
 def extract_participants_list(file_path):
     df = pd.read_excel(file_path)
@@ -54,6 +56,55 @@ def sum_keys(database, keys, column_name, averageFlag = False):
     return database
 
 
+def percentage_change_Elble(ratingOn, ratingOff, alpha=0.5):
+    if len(ratingOn) != len(ratingOff):
+        raise ValueError("Rating ON and Rating OFF have different number of elements.")
+    if len(ratingOn) > 1:
+        change = [1*(pow(10, alpha*(ratingOff[i] - ratingOn[i]))-1) for i, _ in enumerate(ratingOn)]
+    else:
+        change = 1*(pow(10, alpha*(ratingOff - ratingOn))-1)
+    return change
+
+
+def percentage_change_Basic(ratingOn, ratingOff, alpha=0.5):
+    if len(ratingOn) != len(ratingOff):
+        raise ValueError("Rating ON and Rating OFF have different number of elements.")
+    if len(ratingOn) > 1:
+        change = [
+            1 * ((ratingOff[i] - ratingOn[i]) / ratingOff[i]) if ratingOff[i] != 0 else 0
+            for i in range(len(ratingOn))
+        ]
+    else:
+        change = 1*((ratingOff - ratingOn) / ratingOff)
+    return change #[-1 * x for x in change]
+
+
+def dopamine_responsiveness(database, keys, column_name, sheets, percentage_change_function=percentage_change_Elble):
+    # Computes the OFF - ON difference per visit.
+    valueON = None
+    valueOFF = None
+    for i, key in enumerate(keys):
+        idx = 0
+        for sheet_name, data in database.items():
+            filteredData = data[key]
+
+            if "OFF" in sheet_name:
+                valueOFF = filteredData
+            elif "ON" in sheet_name:
+                valueON = filteredData
+
+            if valueON is not None and valueOFF is not None:
+                responsiveness = percentage_change_function(valueON, valueOFF)
+                database[sheets[idx]][column_name[i]] = responsiveness
+                database[sheets[idx-1]][column_name[i]] = responsiveness
+                valueON = None
+                valueOFF = None
+
+            idx=idx+1
+    return database
+
+
+
 def safe_convert_to_float(x):
     try:
         return float(x)
@@ -72,6 +123,29 @@ def create_ledd_column(database, ledd, sheets, path_to_ppp_data_comp):
         elif row["Timepoint"] == "ses-POMVisit3":
             database[sheets[4]].loc[database[sheets[4]]['Subject'] == row["pseudonym"], 'LEDD'] = safe_convert_to_float(row["LEDD"])
             database[sheets[5]].loc[database[sheets[5]]['Subject'] == row["pseudonym"], 'LEDD'] = safe_convert_to_float(row["LEDD"])
+
+    with pd.ExcelWriter(path_to_ppp_data_comp, engine='openpyxl') as writer:
+        for sheet_name, data in database.items():
+            data.to_excel(writer, sheet_name=sheet_name, index=False)
+    return database
+
+
+def create_accelerometry_columns(database, sheets, path_to_ppp_data_comp):
+    mat_data = pd.read_csv('/project/3024023.01/PPP-POM_cohort/Accelerometry/freq_power_scores.csv')
+    for index, row in mat_data.iterrows():
+        database[sheets[0]].loc[database[sheets[0]]['Subject'] == row["Sub"], 'FreqPeak'] = safe_convert_to_float(row["Freq"])
+        database[sheets[1]].loc[database[sheets[1]]['Subject'] == row["Sub"], 'FreqPeak'] = safe_convert_to_float(row["Freq"])
+        database[sheets[2]].loc[database[sheets[2]]['Subject'] == row["Sub"], 'FreqPeak'] = safe_convert_to_float(row["Freq"])
+        database[sheets[3]].loc[database[sheets[3]]['Subject'] == row["Sub"], 'FreqPeak'] = safe_convert_to_float(row["Freq"])
+        database[sheets[4]].loc[database[sheets[4]]['Subject'] == row["Sub"], 'FreqPeak'] = safe_convert_to_float(row["Freq"])
+        database[sheets[5]].loc[database[sheets[5]]['Subject'] == row["Sub"], 'FreqPeak'] = safe_convert_to_float(row["Freq"])
+
+        database[sheets[0]].loc[database[sheets[0]]['Subject'] == row["Sub"], 'LogPower'] = safe_convert_to_float(row["LogPower"])
+        database[sheets[1]].loc[database[sheets[1]]['Subject'] == row["Sub"], 'LogPower'] = safe_convert_to_float(row["LogPower"])
+        database[sheets[2]].loc[database[sheets[2]]['Subject'] == row["Sub"], 'LogPower'] = safe_convert_to_float(row["LogPower"])
+        database[sheets[3]].loc[database[sheets[3]]['Subject'] == row["Sub"], 'LogPower'] = safe_convert_to_float(row["LogPower"])
+        database[sheets[4]].loc[database[sheets[4]]['Subject'] == row["Sub"], 'LogPower'] = safe_convert_to_float(row["LogPower"])
+        database[sheets[5]].loc[database[sheets[5]]['Subject'] == row["Sub"], 'LogPower'] = safe_convert_to_float(row["LogPower"])
 
     with pd.ExcelWriter(path_to_ppp_data_comp, engine='openpyxl') as writer:
         for sheet_name, data in database.items():
@@ -110,6 +184,10 @@ if __name__ == "__main__":
         levEqDose = extract_ledd(path_to_ledd_file, participants)
         ppp_database = create_ledd_column(ppp_database, levEqDose, sheets, path_to_ppp_data_comp)
 
+    freq_power = False
+    if freq_power == False:
+        ppp_database = create_accelerometry_columns(ppp_database, sheets, path_to_ppp_data_comp)
+
     ppp_database = sum_keys(ppp_database, updrs_keys["FinalColumnsNames"][0:33], "TotalU3")
     ppp_database = sum_keys(ppp_database, updrs_keys["FinalColumnsNames"][0:33], "AvgTotalU3", averageFlag=True)
     ppp_database = sum_keys(ppp_database, updrs_keys["FinalColumnsNames"][23:33], "TremorUPDRS")
@@ -126,8 +204,15 @@ if __name__ == "__main__":
     ppp_database = sum_keys(ppp_database, updrs_keys["FinalColumnsNames"][2:7], "AvgLimbsRigidity5Items", averageFlag=True)
     ppp_database = sum_keys(ppp_database, updrs_keys["FinalColumnsNames"][23:25], "PosturalTremor")
     ppp_database = sum_keys(ppp_database, updrs_keys["FinalColumnsNames"][23:25], "AvgPosturalTremor", averageFlag=True)
+    ppp_database = sum_keys(ppp_database, updrs_keys["FinalColumnsNames"][25:27], "KineticTremor")
+    ppp_database = sum_keys(ppp_database, updrs_keys["FinalColumnsNames"][25:27], "AvgKineticTremor", averageFlag=True)
     ppp_database = sum_keys(ppp_database, ["AvgBrady5Items", "AvgLimbsRigidity5Items"], "AvgLimbsBradyRig", averageFlag=True)
     ppp_database = sum_keys(ppp_database, ["Brady5Items", "LimbsRigidity5Items"], "LimbsBradyRig")
+
+    ppp_database = dopamine_responsiveness(ppp_database,
+                                           ["AvgTotalU3", "AvgTremorUPDRS", "AvgLimbsRestTrem", "AvgBrady14Items", "AvgLimbsRigidity5Items"],
+                                           ["ResponseTotalU3", "ResponseTremorUPDRS", "ResponseLimbsRestTrem", "ResponseBrady14Items", "ResponseLimbsRigidity5Items"],
+                                           sheets, percentage_change_function=percentage_change_Elble)
 
     """
     The metrics that I defined based on Zach's paper are:
