@@ -13,7 +13,11 @@ import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
 import plotly.figure_factory as ff
+import matplotlib
+matplotlib.use('TkAgg')  # or 'Agg'
 import matplotlib.pyplot as plt
+matplotlib.use('TkAgg')  # or 'Agg'
+
 import matplotlib.collections as clt
 
 
@@ -97,10 +101,12 @@ def create_histograms_for_pc(changes_data, updrs_key, visit, nbins, results_fold
                 xanchor='right', yanchor='top',
                 font=dict(size=14, color="black")
             )
-        fig.update_layout(title='Clinical Tremor Severity', xaxis_title=f'{updrs_key} (MDS-UPDRS) (% Change)',
-                          yaxis_title='Density (%)')
+        x_label = f'{updrs_key} (MDS-UPDRS) proportion of change' if typeC == "singV" else f'{updrs_key} (MDS-UPDRS) (% Change)'
+        fig.update_layout(title='Clinical Tremor Severity', xaxis_title=x_label, yaxis_title='Density (%)')
         if typeC == "offon":
             figure_name = os.path.join(results_folder, analysis_name, f"pc_{updrs_key}_visit{visit + 1}_plotly.png")
+        elif typeC == "singV":
+            figure_name = os.path.join(results_folder, analysis_name, f"hist_{updrs_key}_visit{visit + 1}_{ses}_plotly.png")
         else:
             figure_name = os.path.join(results_folder, analysis_name, f"pc_{updrs_key}_{ses}_visits{visit[0]+1}-{visit[1]+1}_plotly.png")
         fig.write_image(figure_name)
@@ -115,14 +121,16 @@ def create_histograms_for_pc(changes_data, updrs_key, visit, nbins, results_fold
                      transform=plt.gca().transAxes,
                      fontsize=14, color='black')
         plt.title('Clinical Tremor Severity')
-        plt.xlabel(f'{updrs_key} (MDS-UPDRS) (% Change)')
+        plt.xlabel(x_label)
         plt.ylabel('Density (%)')
         # plt.legend()
         if typeC == "offon":
             figure_name = os.path.join(results_folder, analysis_name, f"pc_{updrs_key}_visit{visit + 1}_sns.png")
+        elif typeC == "singV":
+            figure_name = os.path.join(results_folder, analysis_name, f"hist_{updrs_key}_visit{visit + 1}_{ses}_sns.png")
         else:
             figure_name = os.path.join(results_folder, analysis_name, f"pc_{updrs_key}_{ses}_visits{visit[0]+1}-{visit[1]+1}_sns.png")
-        plt.savefig(figure_name, bbox_inches='tight', dpi=300)
+        plt.savefig(figure_name, bbox_inches='tight', dpi=600)
         plt.clf()
 
 
@@ -211,6 +219,45 @@ def percentage_change_plot(database, updrs_keys, visits, sheets, results_folder,
                     changes_data = {}
                     changes_data["temp"] = functionPerChange(cleaned_Args[visits[1]], cleaned_Args[visits[2]])
                     create_histograms_for_pc(changes_data, updrs_key, [visits[1], visits[2]], nbins, results_folder, analysis_name, style, typeC, ses, includeGaussianCurve)
+    return 0
+
+
+def histograms_plot(database, updrs_keys, visits, sessions, sheets, results_folder, analysis_name, style="all", dataset="ppp", typeC="singV", filterHandsTremorFlag=True, includeGaussianCurve = True, functionPerChange = percentage_change_Elble):
+    nbins = 20
+    visits = [v-1 for v in visits]
+    database_c = copy.deepcopy(database)
+    Path(os.path.join(results_folder, analysis_name)).mkdir(parents=True, exist_ok=True)
+    for updrs_key in updrs_keys:
+        for ises, ses in enumerate(sessions):
+            for visit in visits:
+                if dataset == "ppp":
+                    if filterHandsTremorFlag == True:
+                        idx = filterHandsTremorOnly(database_c[sheets[2 * visit]], database_c[sheets[2 * visit + 1]], dataset = dataset)
+                        data_serie = pd.Series([database_c[sheets[2 * visit + ises]][updrs_key][i] for i in idx])
+                    else:
+                        data_serie = database_c[sheets[2 * visit + ises]][updrs_key]
+                elif dataset == "drdr":
+                    if filterHandsTremorFlag == True:
+                        idx = filterHandsTremorOnly(database_c[sheets[0]], database_c[sheets[1]], dataset = dataset)
+                        if isinstance(updrs_key, list):
+                            data_serie = pd.Series([database_c[sheets[ises]][updrs_key[ises]][i] for i in idx])
+                        else:
+                            data_serie = pd.Series([database_c[sheets[ises]][updrs_key][i] for i in idx])
+                    else:
+                        if isinstance(updrs_key, list) == True:
+                            data_serie = database_c[sheets[ises]][updrs_key[ises]]
+                        else:
+                            data_serie = database_c[sheets[ises]][updrs_key]
+                else:
+                    raise ValueError("Select a correct dataset. Either ppp or drdr.")
+
+                cleaned_Args = cleanNaNRowsifAnyMult(data_serie)
+                data_serie = cleaned_Args[0]
+
+                changes_data = {}
+                changes_data["temp"] = data_serie
+
+                create_histograms_for_pc(changes_data, updrs_key, visit, nbins, results_folder, analysis_name, style=style, typeC=typeC, ses=ses, includeGaussianCurve=includeGaussianCurve)
     return 0
 
 
@@ -351,7 +398,7 @@ def scatter_reg_plot(database, conf_dicts, sheets, results_folder, analysis_name
                         figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}-{dataY['off']}_{timeName}_{sesName}_sns.png")
                     else:
                         figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}-{dataY['off']}_{sesName}_sns.png")
-                    plt.savefig(figure_name, bbox_inches='tight', dpi=300)
+                    plt.savefig(figure_name, bbox_inches='tight', dpi=600)
                     plt.clf()
 
         if len(confs['y']) > 1:
@@ -367,7 +414,7 @@ def scatter_reg_plot(database, conf_dicts, sheets, results_folder, analysis_name
                     figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}-{dataY['off']}_{timeName}_{sesName}_sns.png")
                 else:
                     figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}-{dataY['off']}_{sesName}_sns.png")
-                plt.savefig(figure_name, bbox_inches='tight', dpi=300)
+                plt.savefig(figure_name, bbox_inches='tight', dpi=600)
                 plt.clf()
 
     return 0
@@ -459,7 +506,7 @@ def scatter_reg_plot_pChange(database, conf_dicts, sheets, results_folder, analy
                             figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}-{dataY['off']}_{timeName}_{sesName}_sns.png")
                         else:
                             figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}-{dataY['off']}_{sesName}_sns.png")
-                        plt.savefig(figure_name, bbox_inches='tight', dpi=300)
+                        plt.savefig(figure_name, bbox_inches='tight', dpi=600)
                         plt.clf()
 
         if len(confs['y']) > 1:
@@ -475,7 +522,7 @@ def scatter_reg_plot_pChange(database, conf_dicts, sheets, results_folder, analy
                     figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}_{timeName}_{sesName}_sns.png")
                 else:
                     figure_name = os.path.join(results_folder, analysis_name, f"sp_{nameImageExtra}{dataX['off']}_{sesName}_sns.png")
-                plt.savefig(figure_name, bbox_inches='tight', dpi=300)
+                plt.savefig(figure_name, bbox_inches='tight', dpi=600)
                 plt.clf()
     return 0
 
@@ -529,7 +576,7 @@ def pdf_plots(database, conf_dicts, sheets, results_folder, analysis_name, style
                         plt.ylabel('Density')
                         plt.legend(title='Sessions')
                         figure_name = os.path.join(results_folder, analysis_name, f"pdf_{dataX['off']}_OffOn_sns.png")
-                        plt.savefig(figure_name, bbox_inches='tight', dpi=300)
+                        plt.savefig(figure_name, bbox_inches='tight', dpi=600)
                         plt.clf()
             elif typeC == "longitudinal":
                 for ses in confs["ses"]:
@@ -580,7 +627,7 @@ def pdf_plots(database, conf_dicts, sheets, results_folder, analysis_name, style
                         plt.ylabel('Density')
                         plt.legend(title='Sessions')
                         figure_name = os.path.join(results_folder, analysis_name, f"pdf_{dataX['off']}_long_sns.png")
-                        plt.savefig(figure_name, bbox_inches='tight', dpi=300)
+                        plt.savefig(figure_name, bbox_inches='tight', dpi=600)
                         plt.clf()
             else:
                 raise ValueError("Select an appropriate type of plotting PDF: OFF-ON or Longitudinal comparisons.")
@@ -632,9 +679,14 @@ def RainCloudSNS(x=None, y=None, hue=None, data=None, order=None, hue_order=None
 
     # Add pointplot (if needed)
     if pointplot:
-        sns.pointplot(x=x, y=y, hue=hue, data=data, orient=orient,
+        if hue is not None:
+            sns.pointplot(x=x, y=y, hue=hue, data=data, orient=orient,
                       order=order, hue_order=hue_order, dodge=width_box / 2.,
                       palette=palette if hue is not None else linecolor, ax=ax, **kwpoint)
+        else:
+            sns.pointplot(x=x, y=y, data=data, orient=orient,
+                          order=order, dodge=False,
+                          color='red', ax=ax, **kwpoint)
 
     # Adjust alpha transparency
     if alpha is not None:
@@ -646,6 +698,8 @@ def RainCloudSNS(x=None, y=None, hue=None, data=None, order=None, hue_order=None
         handles, labels = ax.get_legend_handles_labels()
         ax.legend(handles[:len(labels) // (4 if pointplot else 3)], labels[:len(labels) // (4 if pointplot else 3)],
                   bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., title=str(hue))
+    else:
+        ax.legend().remove()
 
     if orient == "h":
         ylim = list(ax.get_ylim())
@@ -714,7 +768,68 @@ def raincloud_plot(data, updrs_conf, sheets, results_folder, analysis_name, data
                 figure_name = os.path.join(results_folder, analysis_name, f"rc_{key}_{timeName}_{sesName}_sns.png")
             else:
                 figure_name = os.path.join(results_folder, analysis_name, f"rc_{updrs_key['off']}-{updrs_key['on']}_{timeName}_{sesName}_sns.png")
-            plt.savefig(figure_name, bbox_inches='tight', dpi=300)
+            plt.savefig(figure_name, bbox_inches='tight', dpi=600)
+            plt.clf()
+            plt.close()
+
+    return 0
+
+
+def raincloud_responsiveness(data, updrs_conf, sheets, cluster_labels, results_folder, analysis_name, clustering_method, condition_labels_map={}):
+    database = copy.deepcopy(data)
+    Path(os.path.join(results_folder, analysis_name)).mkdir(parents=True, exist_ok=True)
+
+    visits = [0, 1, 2]
+    visitTime = "Visit"
+    condition = "Group"
+    subjects = "Subject"
+    scores = "UPDRS_scores"
+    visit_labels_map = {0: "Baseline", 1: "Year 1", 2: "Year 2"}
+    for confs in updrs_conf:
+        for updrs_key in confs["updrs"]:
+            df = pd.DataFrame()
+            scores = updrs_key["off"]
+            visit_labels = []
+            condition_labels = []
+            subject_labels = []
+            score_values = []
+            unique_labels = cluster_labels.unique()[cluster_labels.unique() != 0]
+
+            if condition_labels_map == {}:
+                for clust in unique_labels:
+                    condition_labels_map[clust] = f"Cluster{clust}"
+
+            for visit in visits:
+                for ses in unique_labels:
+                    updrs_scores = database[sheets[2 * visit]][updrs_key["off"]][cluster_labels == ses]
+                    lengthData = len(updrs_scores)
+
+                    visit_label = visit_labels_map.get(visit, "Unknown")
+                    ses_label = condition_labels_map.get(ses, "Unknown")
+
+                    visit_labels.extend([visit_label] * lengthData)
+                    condition_labels.extend([ses_label] * lengthData)
+                    subject_labels.extend(database[sheets[2 * visit]]["Subject"][cluster_labels == ses].tolist())
+                    score_values.extend(updrs_scores.tolist())
+
+            df = pd.DataFrame({
+                visitTime: visit_labels,
+                condition: condition_labels,
+                subjects: subject_labels,
+                scores: score_values
+            })
+
+            f, ax = plt.subplots(figsize=(12, 5))
+            if len(unique_labels)>1:
+                ax = RainCloudSNS(x=visitTime, y=scores, hue=condition, data=df, palette="Set2", bw_method=0.2, linewidth=2, jitter=0.25, move=0.8, width_viol=.8,
+                               ax=ax, orient="h", alpha=.7, dodge=True, pointplot=True)
+            else:
+                ax = RainCloudSNS(x=visitTime, y=scores, data=df, palette="Set2", bw_method=0.2, linewidth=2, jitter=0.25, move=0.8, width_viol=.8,
+                                  ax=ax, orient="h", alpha=.7, dodge=True, pointplot=True)
+
+            plt.title(f"MDS - UPDRS: Clustering by {clustering_method}")
+            figure_name = os.path.join(results_folder, analysis_name, f"progression_{updrs_key['off']}_{clustering_method}.png")
+            plt.savefig(figure_name, bbox_inches='tight', dpi=600)
             plt.clf()
             plt.close()
 
@@ -797,7 +912,7 @@ def coeffs_diff_plot(metric_function, metric_name, data, updrs_conf, sheets, res
             figure_name = os.path.join(results_folder, analysis_name, f"cd_{metric_name}_{nameUPDRSkeys}_{timeName}-{sesName}_sns.png")
         else:
             figure_name = os.path.join(results_folder, analysis_name, f"cd_{nameUPDRSkeys}_{sesName}_sns.png")
-        plt.savefig(figure_name, bbox_inches='tight', dpi=300)
+        plt.savefig(figure_name, bbox_inches='tight', dpi=600)
 
         plt.clf()
     return 0
@@ -824,14 +939,14 @@ def create_stats_table(dataO, results_folder, analysis_name, sheets, percentageC
         "MDS-UPDRS part III",
         "MDS-UPDRS-Brad",
         "MDS-UPDRS-Rig",
-        "MDS-UPDRS-Trem",
+        "MDS-UPDRS-RestTrem",
         "Tremor power, rest, uV2"
     ]
     stats_table["HandsTremorFiltered"]["Clinical ratings and quantified measurements"] = [
         "MDS-UPDRS part III",
         "MDS-UPDRS-Brad",
         "MDS-UPDRS-Rig",
-        "MDS-UPDRS-Trem",
+        "MDS-UPDRS-RestTrem",
         "Tremor power, rest, uV2"
     ]
 
@@ -839,7 +954,7 @@ def create_stats_table(dataO, results_folder, analysis_name, sheets, percentageC
         "MDS-UPDRS part III, mean (range)",
         "MDS-UPDRS-Brad, mean (range)",
         "MDS-UPDRS-Rig, mean (range)",
-        "MDS-UPDRS-Trem, mean (range)"
+        "MDS-UPDRS-RestTrem, mean (range)"
     ]
     names_columns = ["Baseline", "Year 1", "Year 2"]
     for i, name in enumerate(names_columns):
@@ -987,6 +1102,89 @@ def create_stats_table(dataO, results_folder, analysis_name, sheets, percentageC
             data.to_excel(writer, sheet_name=sheet_name, index=False)
 
     return 0
+
+
+def create_responsive_resistant_clusters_based_on_updrs_improvement(database, sheets, results_folder, analysis_name):
+    # Profile: Resistant = 1 and Responsive = 2, No meet rigidity and brady criteria = 3 (excluded), neither responsive nor resistant = 0
+    # For Baseline visit
+    stats_table = dict()
+    visitname = ["Baseline", "Year 1", "Year 2"]
+    stats_table[f"LongitudinalSubjectProfile"] = pd.DataFrame()
+    final_table = pd.DataFrame()
+
+    for visit in [0, 1, 2]:
+        responsivenessRestTremor = pd.Series(percentage_change_Basic(database[sheets[2*visit+1]]["AvgLimbsRestTrem"], database[sheets[2*visit]]["AvgLimbsRestTrem"]))
+        responsivenessRigidity = pd.Series(percentage_change_Basic(database[sheets[2*visit+1]]["AvgLimbsRigidity4Items"], database[sheets[2*visit]]["AvgLimbsRigidity4Items"]))
+        responsivenessBrady = pd.Series(percentage_change_Basic(database[sheets[2*visit+1]]["AvgBrady5Items"], database[sheets[2*visit]]["AvgBrady5Items"]))
+        responsivenessRigBrady = pd.Series([(responsivenessRigidity[i]+responsivenessBrady[i])/2 for i,_ in enumerate(responsivenessBrady)])
+
+        idxRigidity = responsivenessRigidity < 20
+        idxBrady = responsivenessBrady < 20
+        idxRigBrady = responsivenessRigBrady <= 20
+        idxRigBrady = pd.Series([idxRigidity[i] | idxBrady[i] for i in range(len(idxRigidity))]) # Where this is True, Profile = 3
+
+        idxResistant = pd.Series(responsivenessRestTremor <= 20)
+        idxResponsive = pd.Series(responsivenessRestTremor >= 50)
+        idxNeither = pd.Series((responsivenessRestTremor > 20) & (responsivenessRestTremor < 50))
+
+        stats_table[f"SubjectProfile_{visitname[visit]}"] = pd.DataFrame()
+        stats_table[f"Summary_SubjectProfile_{visitname[visit]}"] = pd.DataFrame()
+
+        stats_table[f"SubjectProfile_{visitname[visit]}"]["Subject"] = database[sheets[2*visit]]["Subject"]
+        stats_table[f"SubjectProfile_{visitname[visit]}"]["Responsiveness"] = create_responsiveness_profile_array(idxRigBrady, idxResistant, idxResponsive, idxNeither, [0, 1, 2, 3], responsivenessRestTremor, rigbrady_filtering=False, display_improvement_trem_percent=False)
+        stats_table[f"SubjectProfile_{visitname[visit]}"]["ResponsivenessDescription"] = create_responsiveness_profile_array(idxRigBrady, idxResistant, idxResponsive, idxNeither, ["Neither", "Resistant", "Responsive", "RigBrady_excluded"], responsivenessRestTremor, rigbrady_filtering=False, display_improvement_trem_percent=False)
+        stats_table[f"SubjectProfile_{visitname[visit]}"]["ResponsivenessBradyRigExclusion"] = create_responsiveness_profile_array(idxRigBrady, idxResistant, idxResponsive, idxNeither, [0, 1, 2, 3], responsivenessRestTremor, rigbrady_filtering=True, display_improvement_trem_percent=False)
+        stats_table[f"SubjectProfile_{visitname[visit]}"]["ResponsivenessDescriptionBradyRigExclusion"] = create_responsiveness_profile_array(idxRigBrady, idxResistant, idxResponsive, idxNeither, ["Neither", "Resistant", "Responsive", "RigBrady_excluded"], responsivenessRestTremor, rigbrady_filtering=True, display_improvement_trem_percent=False)
+
+        stats_table[f"Summary_SubjectProfile_{visitname[visit]}"]["Profile"] = ["Resistant", "Responsive", "Neither", "RigBrady_Excluded"]
+        stats_table[f"Summary_SubjectProfile_{visitname[visit]}"]["# Participants"] = [
+            (stats_table[f"SubjectProfile_{visitname[visit]}"]["Responsiveness"] == 1).sum(),
+            (stats_table[f"SubjectProfile_{visitname[visit]}"]["Responsiveness"] == 2).sum(),
+            (stats_table[f"SubjectProfile_{visitname[visit]}"]["Responsiveness"] == 0).sum(),
+            (stats_table[f"SubjectProfile_{visitname[visit]}"]["Responsiveness"] == 3).sum()
+        ]
+
+        profile_df = pd.DataFrame()
+        profile_df["Subject"] = database[sheets[2 * visit]]["Subject"]
+        profile_df[f"Responsiveness_{visitname[visit]}"] = create_responsiveness_profile_array(idxRigBrady, idxResistant, idxResponsive, idxNeither, [0, 1, 2, 3], responsivenessRestTremor, rigbrady_filtering=False, display_improvement_trem_percent=False)
+        profile_df[f"Responsiveness_%_{visitname[visit]}"] = responsivenessRestTremor
+        if final_table.empty:
+            final_table = profile_df
+        else:
+            final_table = pd.merge(final_table, profile_df, on="Subject", how="outer")
+
+    stats_table[f"LongitudinalSubjectProfile"] = final_table
+
+    with pd.ExcelWriter(os.path.join(results_folder, analysis_name, "dopamine_responsiveness_profile.xlsx"), engine='openpyxl') as writer:
+        for sheet_name, data in stats_table.items():
+            data.to_excel(writer, sheet_name=sheet_name, index=False)
+    return 0
+
+
+def create_responsiveness_profile_array(idxRigBrady, idxResistant, idxResponsive, idxNeither, values, restTremResp, rigbrady_filtering=True, display_improvement_trem_percent=True):
+    array = []
+    if display_improvement_trem_percent:
+        for i, resi in enumerate(idxResistant):
+            if resi:
+                array.append(f"{values[1]} : {restTremResp[i]}")
+            elif idxResponsive[i]:
+                array.append(f"{values[2]} : {restTremResp[i]}")
+            elif idxNeither[i]:
+                array.append(f"{values[0]} : {restTremResp[i]}")
+    else:
+        for i, resi in enumerate(idxResistant):
+            if resi:
+                array.append(int(values[1]) if values[1] in [0, 1, 2, 3] else values[1])
+            elif idxResponsive[i]:
+                array.append(int(values[2]) if values[2] in [0, 1, 2, 3] else values[2])
+            elif idxNeither[i]:
+                array.append(int(values[0]) if values[0] in [0, 1, 2, 3] else values[0])
+
+    array = pd.Series(array)
+    if rigbrady_filtering:
+        array[idxRigBrady] = int(values[3]) if values[3] in [0, 1, 2, 3] else values[3]
+
+    return array
 
 
 def create_string_mean_std(data):
@@ -1168,17 +1366,11 @@ def single_sub_trend_plot(data, updrs_conf, sheets, results_folder, analysis_nam
             figure_name = os.path.join(results_folder, analysis_name, f"cd_{nameUPDRSkeys}_{timeName}-{sesName}_sns.png")
         else:
             figure_name = os.path.join(results_folder, analysis_name, f"cd_{nameUPDRSkeys}_{sesName}_sns.png")
-        plt.savefig(figure_name, bbox_inches='tight', dpi=300)
+        plt.savefig(figure_name, bbox_inches='tight', dpi=600)
 
         plt.clf()
         plt.close()
     return 0
-
-
-def plot_individual_lines(data, dx, dhue, linewidth, **kwargs):
-    participants = data[dhue].unique()
-    for participant in participants:
-        sns.lineplot(data=data[data[dhue] == participant], x=dx, y='value', errorbar=None, marker='o', linewidth=linewidth, **kwargs)
 
 
 def plot_individual_lines2(data, dx, dhue, dataMeans=None, linewidth=1.5, mean_line_color='black', mean_line_thickness=2, **kwargs):
@@ -1214,6 +1406,8 @@ if __name__ == "__main__":
     base_PPP_folder = "/project/3024023.01/PPP-POM_cohort/"
     results_folder_ppp = "/project/3024023.01/PPP-POM_cohort/updrs_analysis/"
     path_to_ppp_data_reduced = os.path.join(base_PPP_folder, "updrs_analysis", "ppp_updrs_database_consistent_subjects_by_visit.xlsx")
+    path_to_ppp_data_reduced = os.path.join(base_PPP_folder, "updrs_analysis", "ppp_updrs_database_consistent_subjects.xlsx")
+    path_to_consistent_sub_responsiveness_profile = os.path.join(base_PPP_folder, "updrs_analysis/stats_summary_97sub/dopamine_responsiveness_profile_97.xlsx")
 
     base_drdr_folder = "/project/3024023.01/fMRI_DRDR/"
     results_folder_drdr = "/project/3024023.01/fMRI_DRDR/updrs_analysis/"
@@ -1241,22 +1435,40 @@ if __name__ == "__main__":
     plot_raincloud_flag = False
     plot_pdf_flag = False
     plot_coeffs_diff_flag = False
-    create_stats_table_flag = True
     plot_single_sub_trends_flag = False
+    plot_variables_histograms_flag = False
+    create_stats_table_flag = False
+    create_responsiveness_profile_flag = False
+    plot_rainclouds_responsiveness_flag = True
 
     """ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
-    if plot_percentage_change_flag:
-        if run_local: print("----- PLOTTING PERCENTAGE CHANGE -----")
-        analysis_name = "Percentage-Change-Basic_noFilter"
+    if plot_variables_histograms_flag:
+        if run_local: print("----- PLOTTING HISTOGRAMS -----")
+        analysis_name = "Histograms_noFilter"
         visits_ppp = [1, 2, 3]
         visits_drdr = [1]  # ["UPDRS ON", "UPDRS OFF"]
+        sessions = ["off"] # ["off", "on"]
         # updrs_keys_ppp = ["AvgLimbsRestTrem", "AvgTremorUPDRS", "TremorUPDRS", "PosturalTremor", "AvgBrady14Items", "AvgBrady5Items", "AvgLimbsRigidity5Items", "AvgLimbsRigidity4Items", "AvgTotalU3", "TotalU3"]
         updrs_keys_ppp = ["ResponseTotalU3", "ResponseTremorUPDRS", "ResponseLimbsRestTrem", "ResponseBrady14Items", "ResponseLimbsRigidity5Items"]
         # updrs_keys_drdr = ["AvgLimbsRestTrem", "AvgBrady14Items", "AvgLimbsRigidity", ["OFFU_tot", "ONU_tot"]]
         updrs_keys_drdr = ["ResponseTotalU3", "ResponseTremorUPDRS", "ResponseLimbsRestTrem", "ResponseBrady14Items", "ResponseLimbsRigidity5Items"]
-        percentage_change_plot(ppp_database, updrs_keys_ppp, visits_ppp, sheets_ppp, results_folder_ppp, analysis_name, style="plotly", dataset="ppp", typeC="offon", filterHandsTremorFlag=False, includeGaussianCurve = True, functionPerChange = percentage_change_Basic)
-        percentage_change_plot(ppp_database, updrs_keys_ppp, visits_ppp, sheets_ppp, results_folder_ppp, analysis_name, style="plotly", dataset="ppp", typeC="longitudinal", filterHandsTremorFlag=False, includeGaussianCurve=True, functionPerChange = percentage_change_Basic)
-        percentage_change_plot(drdr_database, updrs_keys_drdr, visits_drdr, sheets_drdr, results_folder_drdr, analysis_name, style="plotly", dataset="drdr", typeC="offon", filterHandsTremorFlag=False, includeGaussianCurve = True, functionPerChange = percentage_change_Basic)
+        histograms_plot(ppp_database, updrs_keys_ppp, visits_ppp, sessions, sheets_ppp, results_folder_ppp, analysis_name, style="plotly", dataset="ppp", filterHandsTremorFlag=False, includeGaussianCurve = True, functionPerChange = percentage_change_Basic)
+        # histograms_plot(ppp_database, updrs_keys_ppp, visits_ppp, sessions, sheets_ppp, results_folder_ppp, analysis_name, style="plotly", dataset="ppp", typeC="longitudinal", filterHandsTremorFlag=False, includeGaussianCurve=True, functionPerChange = percentage_change_Basic)
+        histograms_plot(drdr_database, updrs_keys_drdr, visits_drdr, sessions, sheets_drdr, results_folder_drdr, analysis_name, style="plotly", dataset="drdr", filterHandsTremorFlag=False, includeGaussianCurve = True, functionPerChange = percentage_change_Basic)
+
+    """ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
+    if plot_percentage_change_flag:
+        if run_local: print("----- PLOTTING PERCENTAGE CHANGE -----")
+        analysis_name = "Percentage-Change-Elble_noFilter"
+        visits_ppp = [1, 2, 3]
+        visits_drdr = [1]  # ["UPDRS ON", "UPDRS OFF"]
+        updrs_keys_ppp = ["AvgLimbsRestTrem", "AvgTremorUPDRS", "TremorUPDRS", "PosturalTremor", "AvgBrady14Items", "AvgBrady5Items", "AvgLimbsRigidity5Items", "AvgLimbsRigidity4Items", "AvgTotalU3", "TotalU3"]
+        # updrs_keys_ppp = ["ResponseTotalU3", "ResponseTremorUPDRS", "ResponseLimbsRestTrem", "ResponseBrady14Items", "ResponseLimbsRigidity5Items"]
+        updrs_keys_drdr = ["AvgLimbsRestTrem", "AvgBrady14Items", "AvgLimbsRigidity5Items", ["OFFU_tot", "ONU_tot"]]
+        # updrs_keys_drdr = ["ResponseTotalU3", "ResponseTremorUPDRS", "ResponseLimbsRestTrem", "ResponseBrady14Items", "ResponseLimbsRigidity5Items"]
+        percentage_change_plot(ppp_database, updrs_keys_ppp, visits_ppp, sheets_ppp, results_folder_ppp, analysis_name, style="plotly", dataset="ppp", typeC="offon", filterHandsTremorFlag=False, includeGaussianCurve = True, functionPerChange = percentage_change_Elble)
+        percentage_change_plot(ppp_database, updrs_keys_ppp, visits_ppp, sheets_ppp, results_folder_ppp, analysis_name, style="plotly", dataset="ppp", typeC="longitudinal", filterHandsTremorFlag=False, includeGaussianCurve=True, functionPerChange = percentage_change_Elble)
+        percentage_change_plot(drdr_database, updrs_keys_drdr, visits_drdr, sheets_drdr, results_folder_drdr, analysis_name, style="plotly", dataset="drdr", typeC="offon", filterHandsTremorFlag=False, includeGaussianCurve = True, functionPerChange = percentage_change_Elble)
 
     """ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
     if plot_scatter_correlation_flag:
@@ -1274,7 +1486,13 @@ if __name__ == "__main__":
             {'x': [{'off': 'LEDD', 'on': 'LEDD'}], 'y': [{'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'}], 'visit': [1, 2, 3], 'ses': ['off', 'on']},
             {'x': [{'off': 'LEDD', 'on': 'LEDD'}], 'y': [{'off': 'AvgTremorUPDRS', 'on': 'AvgTremorUPDRS'}], 'visit': [1, 2, 3], 'ses': ['off', 'on']},
             {'x': [{'off': 'LogPower', 'on': 'LogPower'}], 'y': [{'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'}], 'visit': [1], 'ses': ['off']},
-            {'x': [{'off': 'LogPower', 'on': 'LogPower'}], 'y': [{'off': 'FreqPeak', 'on': 'FreqPeak'}], 'visit': [1], 'ses': ['off']}
+            {'x': [{'off': 'LogPower', 'on': 'LogPower'}], 'y': [{'off': 'FreqPeak', 'on': 'FreqPeak'}], 'visit': [1], 'ses': ['off']},
+            {'x': [{'off': 'LEDD', 'on': 'LEDD'}], 'y': [
+                {'off': 'ResponseLimbsRestTrem', 'on': 'ResponseLimbsRestTrem'},
+                {'off': 'ResponseBrady14Items', 'on': 'ResponseBrady14Items'},
+                {'off': 'ResponseLimbsRigidity5Items', 'on': 'ResponseLimbsRigidity5Items'},
+                {'off': 'ResponseTotalU3', 'on': 'ResponseTotalU3'}
+            ], 'visit': [1], 'ses': ['off', 'on']},
         ]
         updrs_conf_drdr = [
             {'x': [{'off': 'OFFTremorUPDRS', 'on': 'ONTremorUPDRS'}], 'y': [{'off': 'OFFU_tot', 'on': 'ONU_tot'}], 'visit': [1], 'ses': ['off', 'on']},
@@ -1282,7 +1500,7 @@ if __name__ == "__main__":
         ]
 
         scatter_reg_plot(ppp_database, updrs_conf_ppp, sheets_ppp, results_folder_ppp, analysis_name, style="plotly", dataset="ppp", filterHandsTremorFlag=False)
-        scatter_reg_plot(drdr_database, updrs_conf_drdr, sheets_drdr, results_folder_drdr, analysis_name, style="plotly", dataset="drdr", filterHandsTremorFlag=True)
+        scatter_reg_plot(drdr_database, updrs_conf_drdr, sheets_drdr, results_folder_drdr, analysis_name, style="plotly", dataset="drdr", filterHandsTremorFlag=False)
 
         analysis_name = "scatter_plots_Basic_noFilter"
         updrs_conf_ppp = [
@@ -1336,7 +1554,7 @@ if __name__ == "__main__":
             ], 'visit': [1, 2, 3], 'ses': ['off', 'on']}
         ]
         updrs_conf_drdr = [
-            {'updrs': [{'off': 'OFFTremorUPDRS', 'on': 'ONTremorUPDRS'}, {'off': 'OFFU_tot', 'on': 'ONU_tot'}], 'visit': [1], 'ses': ['off', 'on']}
+            {'updrs': [{'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'}], 'visit': [1], 'ses': ['off', 'on']}
         ]
 
         raincloud_plot(ppp_database, updrs_conf_ppp, sheets_ppp, results_folder_ppp, analysis_name, dataset="ppp", filterHandsTremorFlag=False)
@@ -1345,7 +1563,7 @@ if __name__ == "__main__":
     """ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
     if plot_pdf_flag:
         if run_local: print("----- PLOTTING PROBABILITY DENSITY FUNCTIONS -----")
-        analysis_name = "pdf"
+        analysis_name = "pdf_noFilter"
         updrs_conf_ppp = [
             {'x': [
                 {'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'},
@@ -1362,13 +1580,13 @@ if __name__ == "__main__":
                 {'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'}
             ], 'visit': [1], 'ses': ['off', 'on'], 'type': "offon"}
         ]
-        pdf_plots(ppp_database, updrs_conf_ppp, sheets_ppp, results_folder_ppp, analysis_name, style="plotly", dataset="ppp", filterHandsTremorFlag=True)
-        pdf_plots(drdr_database, updrs_conf_drdr, sheets_drdr, results_folder_drdr, analysis_name, style="plotly", dataset="drdr", filterHandsTremorFlag=True)
+        pdf_plots(ppp_database, updrs_conf_ppp, sheets_ppp, results_folder_ppp, analysis_name, style="plotly", dataset="ppp", filterHandsTremorFlag=False)
+        pdf_plots(drdr_database, updrs_conf_drdr, sheets_drdr, results_folder_drdr, analysis_name, style="plotly", dataset="drdr", filterHandsTremorFlag=False)
 
     """ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
     if plot_coeffs_diff_flag:
         if run_local: print("----- PLOTTING MEANS DIFFERENCE -----")
-        analysis_name = "metric_diff_plots"
+        analysis_name = "metric_diff_plots_noFilter"
         updrs_conf_ppp = [
             {'updrs': [{'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'}], 'visit': [1, 2, 3], 'ses': ['off', 'on']},
             {'updrs': [{'off': 'AvgBrady14Items', 'on': 'AvgBrady14Items'}, {'off': 'AvgTotalU3', 'on': 'AvgTotalU3'}], 'visit': [1, 2], 'ses': ['off', 'on']}
@@ -1377,19 +1595,19 @@ if __name__ == "__main__":
             {'updrs': [{'off': 'OFFTremorUPDRS', 'on': 'ONTremorUPDRS'}, {'off': 'OFFU_tot', 'on': 'ONU_tot'}], 'visit': [1], 'ses': ['off', 'on']}
         ]
 
-        coeffs_diff_plot(np.mean, "mean", ppp_database, updrs_conf_ppp, sheets_ppp, results_folder_ppp, analysis_name, dataset="ppp", filterHandsTremorFlag=True)
+        coeffs_diff_plot(np.mean, "mean", ppp_database, updrs_conf_ppp, sheets_ppp, results_folder_ppp, analysis_name, dataset="ppp", filterHandsTremorFlag=False)
         # coeffs_diff_plot(np.mean, "mean", drdr_database, updrs_conf_drdr, sheets_drdr, results_folder_drdr, analysis_name, dataset="drdr", filterHandsTremorFlag=True)
 
     """ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
     if create_stats_table_flag:
         if run_local: print("----- CREATING TABLE WITH STATS SUMMARY PPP -----")
-        analysis_name = "stats_summary"
+        analysis_name = "stats_summary_97sub"
         create_stats_table(ppp_database, results_folder_ppp, analysis_name, sheets_ppp, percentageChangeFunction=percentage_change_Basic)
 
     """ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
     if plot_single_sub_trends_flag:
-        if run_local: print("----- PLOTTING MEANS DIFFERENCE -----")
-        analysis_name = "single_sub_trend"
+        if run_local: print("----- PLOTTING SINGLE SUBJECT TRENDS -----")
+        analysis_name = "single_sub_trend_noFilter"
         updrs_conf_ppp = [
             {'updrs': [{'off': 'AvgBrady14Items', 'on': 'AvgBrady14Items'}], 'visit': [1, 2, 3], 'ses': ['off', 'on']},
             {'updrs': [{'off': 'AvgLimbsRigidity5Items', 'on': 'AvgLimbsRigidity5Items'}], 'visit': [1, 2, 3], 'ses': ['off', 'on']},
@@ -1404,11 +1622,11 @@ if __name__ == "__main__":
             {'updrs': [
                 {'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'},
                 {'off': 'LimbsRestTrem', 'on': 'LimbsRestTrem'},
-            ], 'visit': [1, 2, 3], 'ses': ['off', 'on']}
+            ], 'visit': [1, 2, 3], 'ses': ['off', 'on']},
         ]
         updrs_conf_drdr = [
             {'updrs': [{'off': 'AvgBrady14Items', 'on': 'AvgBrady14Items'}], 'visit': [1], 'ses': ['off', 'on']},
-            {'updrs': [{'off': 'AvgLimbsRigidity', 'on': 'AvgLimbsRigidity'}], 'visit': [1], 'ses': ['off', 'on']},
+            {'updrs': [{'off': 'AvgLimbsRigidity5Items', 'on': 'AvgLimbsRigidity5Items'}], 'visit': [1], 'ses': ['off', 'on']},
             {'updrs': [{'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'}], 'visit': [1], 'ses': ['off', 'on']},
             {'updrs': [{'off': 'OFFTremorUPDRS', 'on': 'ONTremorUPDRS'}], 'visit': [1], 'ses': ['off', 'on']},
             {'updrs': [
@@ -1422,5 +1640,40 @@ if __name__ == "__main__":
         single_sub_trend_plot(ppp_database, updrs_conf_ppp, sheets_ppp, results_folder_ppp, analysis_name, dataset="ppp", filterHandsTremorFlag=False)
         single_sub_trend_plot(drdr_database, updrs_conf_drdr, sheets_drdr, results_folder_drdr, analysis_name, dataset="drdr", filterHandsTremorFlag=False)
 
+    """ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
+    if create_responsiveness_profile_flag:
+        if run_local: print("----- CREATING RESPONSIVENESS PROFILE TABLES -----")
+        # Create dopamine responsiveness participants profile table
+        create_responsive_resistant_clusters_based_on_updrs_improvement(ppp_database, sheets_ppp, results_folder_ppp, "stats_summary_97sub")
 
-        sys.exit()
+    """ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
+    if plot_rainclouds_responsiveness_flag:
+        if run_local: print("----- PLOTTING RAINCLOUDS FOR RESPONSIVENESS -----")
+        analysis_name = "raincloud_responsiveness"
+        updrs_conf_ppp = [
+            {'updrs': [
+                {'off': 'ResponseTotalU3', 'on': 'ResponseTotalU3'},
+                {'off': 'ResponseTremorUPDRS', 'on': 'ResponseTremorUPDRS'},
+                {'off': 'ResponseLimbsRestTrem', 'on': 'ResponseLimbsRestTrem'},
+                {'off': 'ResponseBrady14Items', 'on': 'ResponseBrady14Items'},
+                {'off': 'ResponseLimbsRigidity5Items', 'on': 'ResponseLimbsRigidity5Items'},
+            ], 'visit': [1, 2, 3], 'ses': ['off']}
+        ]
+
+        # clustering_method = "consistent-subjects"
+        # clustering_method = "two-steps"
+        clustering_method = "arbitrary-updrs"
+        if clustering_method == "two-steps":
+            cluster_labels = ppp_database[sheets_ppp[0]]["Predict_Model4"]
+            cluster_names = {1: "Responsive", 2: "Resistant"}
+        elif clustering_method == "arbitrary-updrs":
+            profiles97sub = pd.read_excel(path_to_consistent_sub_responsiveness_profile, sheet_name="LongitudinalSubjectProfile")
+            cluster_labels = profiles97sub["Responsiveness_Baseline"] # 1=Resi and 2=Resp
+            cluster_names = {1: "Resistant", 2: "Responsive"}
+        else:
+            cluster_labels = pd.Series([1]*97)
+            cluster_names = {1:"Consistent subjects"}
+        raincloud_responsiveness(ppp_database, updrs_conf_ppp, sheets_ppp, cluster_labels, results_folder_ppp, analysis_name, clustering_method, condition_labels_map=cluster_names)
+
+
+    sys.exit()

@@ -60,10 +60,10 @@ def percentage_change_Elble(ratingOn, ratingOff, alpha=0.5):
     if len(ratingOn) != len(ratingOff):
         raise ValueError("Rating ON and Rating OFF have different number of elements.")
     if len(ratingOn) > 1:
-        change = [1*(pow(10, alpha*(ratingOff[i] - ratingOn[i]))-1) for i, _ in enumerate(ratingOn)]
+        change = [1*(pow(10, alpha*(ratingOn[i] - ratingOff[i]))-1) for i, _ in enumerate(ratingOn)]
     else:
-        change = 1*(pow(10, alpha*(ratingOff - ratingOn))-1)
-    return change
+        change = 1*(pow(10, alpha*(ratingOn - ratingOff))-1)
+    return [-1 * x for x in change]
 
 
 def percentage_change_Basic(ratingOn, ratingOff, alpha=0.5):
@@ -81,26 +81,17 @@ def percentage_change_Basic(ratingOn, ratingOff, alpha=0.5):
 
 def dopamine_responsiveness(database, keys, column_name, sheets, percentage_change_function=percentage_change_Elble):
     # Computes the OFF - ON difference per visit.
-    valueON = None
-    valueOFF = None
+    visits = [0, 1, 2]
     for i, key in enumerate(keys):
-        idx = 0
-        for sheet_name, data in database.items():
-            filteredData = data[key]
+        for visit in visits:
+            filteredData_off = database[sheets[2*visit]][key]
+            filteredData_on = database[sheets[2 * visit + 1]][key]
 
-            if "OFF" in sheet_name:
-                valueOFF = filteredData
-            elif "ON" in sheet_name:
-                valueON = filteredData
+            responsiveness = percentage_change_function(filteredData_on, filteredData_off)
 
-            if valueON is not None and valueOFF is not None:
-                responsiveness = percentage_change_function(valueON, valueOFF)
-                database[sheets[idx]][column_name[i]] = responsiveness
-                database[sheets[idx-1]][column_name[i]] = responsiveness
-                valueON = None
-                valueOFF = None
+            database[sheets[2*visit]][column_name[i]] = responsiveness
+            database[sheets[2*visit+1]][column_name[i]] = responsiveness
 
-            idx=idx+1
     return database
 
 

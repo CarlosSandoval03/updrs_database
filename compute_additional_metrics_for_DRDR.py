@@ -21,10 +21,10 @@ def percentage_change_Elble(ratingOn, ratingOff, alpha=0.5):
     if len(ratingOn) != len(ratingOff):
         raise ValueError("Rating ON and Rating OFF have different number of elements.")
     if len(ratingOn) > 1:
-        change = [1*(pow(10, alpha*(ratingOff[i] - ratingOn[i]))-1) for i, _ in enumerate(ratingOn)]
+        change = [1*(pow(10, alpha*(ratingOn[i] - ratingOff[i]))-1) for i, _ in enumerate(ratingOn)]
     else:
-        change = 1*(pow(10, alpha*(ratingOff - ratingOn))-1)
-    return change
+        change = 1*(pow(10, alpha*(ratingOn - ratingOff))-1)
+    return [-1 * x for x in change]
 
 
 def percentage_change_Basic(ratingOn, ratingOff, alpha=0.5):

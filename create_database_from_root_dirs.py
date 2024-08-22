@@ -112,22 +112,22 @@ def safe_convert_to_int(x):
         return np.nan
 
 
-def load_if_exists(path, keys, dict_data, outKeyO = ""):
+def load_if_exists(path, keys, dict_data, outKeyO = [""]):
     if os.path.exists(path):
         with open(path, 'r') as file:
             dataJSON = json.load(file)
-        for key in keys:
-            if outKeyO == "":
+        for i, key in enumerate(keys):
+            if outKeyO[0] == "":
                 outKey = key
             else:
-                outKey = outKeyO
+                outKey = outKeyO[i]
             dict_data[outKey] = safe_convert_to_int(dataJSON["crf"].get(key, np.nan))
     else:
-        for key in keys:
-            if outKeyO == "":
+        for i, key in enumerate(keys):
+            if outKeyO[0] == "":
                 outKey = key
             else:
-                outKey = outKeyO
+                outKey = outKeyO[i]
             dict_data[outKey] = np.nan
 
     return dict_data
@@ -150,8 +150,8 @@ def parse_time_string(time_str):
 def include_diagnose_information_and_manual_keys(dict_data, path_to_sub_dirs, sub, visit_folder, visit_idx, session=["offon", ""]):
     if session[0] == "offon":
         algemeen1_name = os.path.join(path_to_sub_dirs, sub, visit_folder, f"Castor.Visit{visit_idx+1}.Motorische_taken_OFF.Algemeen1.json")
-        algemeen1_keys = ["FirstSympYear", "FirstSympMonth"]
-        dict_data = load_if_exists(algemeen1_name, algemeen1_keys, dict_data)
+        algemeen1_keys = ["FirstSympYear", "FirstSympMonth", "PrefHand", "MostAffSide"]
+        dict_data = load_if_exists(algemeen1_name, algemeen1_keys, dict_data, outKeyO=["FirstSympYear", "FirstSympMonth", "Handedness", "MostAffSide"])
 
         algemeen3_name = os.path.join(path_to_sub_dirs, sub, visit_folder, f"Castor.Visit{visit_idx+1}.Motorische_taken_OFF.Algemeen3.json")
         algemeen3_keys = ["DiagParkMonth"]
@@ -171,7 +171,7 @@ def include_diagnose_information_and_manual_keys(dict_data, path_to_sub_dirs, su
     elif session[0] == "off":
         handy = os.path.join(path_to_sub_dirs, sub, visit_folder, f"Castor.Visit{visit_idx + 1}.Motorische_taken_OFF.Hoehn__Yahr_stage.json")
         handy_keys = ["Up3OfHoeYah"]
-        dict_data = load_if_exists(handy, handy_keys, dict_data, outKeyO="HoeYah")
+        dict_data = load_if_exists(handy, handy_keys, dict_data, outKeyO=["HoeYah"])
         if os.path.exists(session[1]):
             with open(session[1], 'r') as file:
                 dataJSON = json.load(file)
@@ -185,7 +185,7 @@ def include_diagnose_information_and_manual_keys(dict_data, path_to_sub_dirs, su
     elif session[0] == "on":
         handy = os.path.join(path_to_sub_dirs, sub, visit_folder, f"Castor.Visit{visit_idx + 1}.Motorische_taken_ON.Hoehn__Yahr_stage.json")
         handy_keys = ["Up3OnHoeYah"]
-        dict_data = load_if_exists(handy, handy_keys, dict_data, outKeyO="HoeYah")
+        dict_data = load_if_exists(handy, handy_keys, dict_data, outKeyO=["HoeYah"])
         if os.path.exists(session[1]):
             with open(session[1], 'r') as file:
                 dataJSON = json.load(file)
