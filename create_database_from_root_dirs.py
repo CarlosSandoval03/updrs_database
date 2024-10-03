@@ -18,7 +18,7 @@ import math
 
 def extract_participants_list(file_path):
     df = pd.read_excel(file_path)
-    participants = df["IDs"]
+    participants = df["Subject"]
 
     return participants
 
@@ -297,8 +297,9 @@ if __name__ == "__main__":
 
     # Define base directories paths
     base_PPP_folder             = "/project/3024023.01/PPP-POM_cohort/"
-    path_to_participants_list   = os.path.join(base_PPP_folder, "PPP_cohort_participants-with-tremor-list.xlsx")
-    path_to_updrs_keys          = os.path.join(base_PPP_folder, "updrs_analysis", "updrs_keys.xlsx")
+    # path_to_participants_list   = os.path.join(base_PPP_folder, "PPP_cohort_participants-with-tremor-list.xlsx")
+    path_to_participants_list = os.path.join(base_PPP_folder, "Complete_ppp_participants_list.xlsx")
+    path_to_updrs_keys          = os.path.join(base_PPP_folder, "updrs_keys.xlsx")
     path_to_updrs_database      = os.path.join(base_PPP_folder, "updrs_analysis", "ppp_updrs_database_raw_data.xlsx")
     path_to_sub_dirs            = "/project/3022026.01/pep/ClinVars_10-08-2023/"
 
