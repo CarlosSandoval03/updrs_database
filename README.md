@@ -1,2 +1,7 @@
 # updrs_database
-Code for creating the UPDRS database in the PPP (POM) project.  Code for computing additional metrics. Code for plotting results and trends, and creation of summary tables.
+Root scripts for creating UPDRS database in a suitable format, and analyze them using other libraries.
+- Create database
+- Compute secondary metrics
+- Plot results and trends
+- Create summary tables
+- etc.
