@@ -357,10 +357,10 @@ if __name__ == "__main__":
 
     # Paths
     base_PPP_folder = "/project/3024023.01/PPP-POM_cohort/"
-    results_folder_ppp = "/project/3024023.01/PPP-POM_cohort/updrs_analysis/"
+    results_folder_ppp = "/project/3024023.01/PPP-POM_cohort/updrs_analysis_154/"
     path_to_ppp_data_reduced = os.path.join(results_folder_ppp, "ppp_updrs_database_consistent_subjects_trem-filtered.xlsx")
     # path_to_ppp_data_reduced = os.path.join(results_folder_ppp, "ppp_updrs_database_consistent_subjects.xlsx")
-    filtered_string = "TremFiltered"
+    filtered_string = "" # "TremFiltered"
     sub_folder = f"stats_summary_{filtered_string}"
     path_to_consistent_sub_responsiveness_profile = os.path.join(results_folder_ppp, f"{filtered_string}Dopamine_responsiveness_profile.xlsx")
 
@@ -384,6 +384,16 @@ if __name__ == "__main__":
             drdr_database[sheet] = pd.read_excel(path_to_drdr_data, sheet_name=sheet)
     sheets_drdr = ["UPDRS OFF", "UPDRS ON"]
 
+    only_34_sub_drdr = True
+    if only_34_sub_drdr:
+        valid_subjects_drdr = ["sub-p30", "sub-p08", "sub-p11", "sub-p28", "sub-p27", "sub-p42", "sub-p50", "sub-p72", "sub-p75",
+                               "sub-p74", "sub-p73", "sub-p78", "sub-p81", "sub-p83", "sub-p18", "sub-p02", "sub-p60", "sub-p59",
+                               "sub-p38", "sub-p49", "sub-p40", "sub-p19", "sub-p29", "sub-p36", "sub-p33", "sub-p71", "sub-p21",
+                               "sub-p70", "sub-p64", "sub-p56", "sub-p48", "sub-p43", "sub-p76", "sub-p77"]
+        for key in drdr_database:
+            df = drdr_database[key]
+            drdr_database[key] = df[df['Subject'].isin(valid_subjects_drdr)]
+            drdr_database[key] = drdr_database[key].reset_index(drop=True)
     """ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
     process_drdr = False
     process_ppp = True
@@ -391,6 +401,7 @@ if __name__ == "__main__":
 
     plot_variables_histograms_flag = False
     plot_percentage_change_flag = False
+    plot_averaged_histograms_flag = False
     plot_scatter_correlation_flag = False
     plot_pc_scatter_flag = False
     plot_raincloud_flag = False
@@ -399,12 +410,13 @@ if __name__ == "__main__":
     plot_coeffs_diff_flag = False
     plot_single_sub_trends_flag = False
 
-    create_stats_table_flag = False
     create_responsiveness_profile_flag = False
-    plot_rainclouds_responsiveness_flag = True
+    plot_rainclouds_responsiveness_flag = False
+    plot_rainclouds_groupsession_flag = True
+    plot_responsiveness_bars_flag = False
 
-    objDataHandlingPPP = UPDRSPlotting(ppp_database, "ppp")
-    objDataHandlingDRDR = UPDRSPlotting(drdr_database, "drdr")
+    objDataHandlingPPP = UPDRSPlotting(ppp_database, "ppp", trem_filtered=False, updrs_analysis_folder="updrs_analysis_154")
+    objDataHandlingDRDR = UPDRSPlotting(drdr_database, "drdr", trem_filtered=False)
 
     """ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
     if ignore_unmedicated_participants_flag:
@@ -530,11 +542,15 @@ if __name__ == "__main__":
             ], 'visit': [1, 2, 3], 'ses': ['off', 'on']}
         ]
         updrs_conf_drdr = [
-            {'updrs': [{'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'}], 'visit': [1], 'ses': ['off', 'on']}
+            {'updrs': [
+                {'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'},
+                {'off': 'AvgBrady14Items', 'on': 'AvgBrady14Items'},
+                {'off': 'AvgLimbsRigidity5Items', 'on': 'AvgLimbsRigidity5Items'}
+            ], 'visit': [1], 'ses': ['off', 'on']}
         ]
 
-        if process_ppp: objDataHandlingPPP.plot_rainclouds(updrs_conf_ppp)
-        if process_drdr: objDataHandlingDRDR.plot_rainclouds(updrs_conf_drdr)
+        if process_ppp: objDataHandlingPPP.plot_rainclouds_by_session(updrs_conf_ppp)
+        if process_drdr: objDataHandlingDRDR.plot_rainclouds_by_session(updrs_conf_drdr)
 
     """ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
     if plot_pdf_flag:
@@ -614,7 +630,7 @@ if __name__ == "__main__":
     if create_responsiveness_profile_flag:
         if run_local: print("----- CREATING RESPONSIVENESS PROFILE TABLES -----")
         # Create dopamine responsiveness participants profile table
-        if process_ppp: objDataHandlingPPP.create_updrs_arbitrary_clusters()
+        if process_ppp: objDataHandlingPPP.create_updrs_arbitrary_clusters(responsiveness_key="AvgLimbsRestTrem")
 
     """ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
     if plot_rainclouds_responsiveness_flag:
@@ -624,16 +640,130 @@ if __name__ == "__main__":
                 {'off': 'ChangeTotalU3', 'on': 'ChangeTotalU3'},
                 {'off': 'ChangeTremorUPDRS', 'on': 'ChangeTremorUPDRS'},
                 {'off': 'ChangeLimbsRestTrem', 'on': 'ChangeLimbsRestTrem'},
+                {'off': 'DifferenceLimbsRestTrem', 'on': 'DifferenceLimbsRestTrem'},
                 {'off': 'ChangeBrady14Items', 'on': 'ChangeBrady14Items'},
                 {'off': 'ChangeLimbsRigidity5Items', 'on': 'ChangeLimbsRigidity5Items'},
                 {'off': 'ResponseRestTrem', 'on': 'ResponseRestTrem'},
             ], 'visit': [1, 2, 3], 'ses': ['off']}
         ]
 
-        if process_ppp: objDataHandlingPPP.plot_rainclouds_by_group(updrs_conf_ppp, "two-steps")
-        if process_ppp: objDataHandlingPPP.plot_rainclouds_by_group(updrs_conf_ppp, "two-steps", model_labels="Labels_Model12", model_name="Model12_3clust")
-        if process_ppp: objDataHandlingPPP.plot_rainclouds_by_group(updrs_conf_ppp, "two-steps", model_labels="Labels_Model11b", model_name="Model11")
+        # if process_ppp: objDataHandlingPPP.plot_rainclouds_by_group(updrs_conf_ppp, "two-steps", model_name="Model15_3clust")
+        # if process_ppp: objDataHandlingPPP.plot_rainclouds_by_group(updrs_conf_ppp, "two-steps", model_labels="Labels_Model12_3clust", model_name="Model12_3clust")
+        # if process_ppp: objDataHandlingPPP.plot_rainclouds_by_group(updrs_conf_ppp, "two-steps", model_labels="Labels_Model11b", model_name="Model11")
+        # if process_ppp: objDataHandlingPPP.plot_rainclouds_by_group(updrs_conf_ppp, "two-steps", model_labels="Labels_Model14_2clustb", model_name="Model14_2clust")
         if process_ppp: objDataHandlingPPP.plot_rainclouds_by_group(updrs_conf_ppp, "arbitrary-updrs")
         if process_ppp: objDataHandlingPPP.plot_rainclouds_by_group(updrs_conf_ppp, "consistent-subjects")
+
+    """ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
+    if plot_rainclouds_groupsession_flag:
+        if run_local: print("----- PLOTTING RAINCLOUDS FOR RESPONSIVENESS BY GROUPS AND SESSIONS -----")
+        updrs_conf_ppp = [{
+            'updrs': [
+                {'off': 'LimbsRestTrem', 'on': 'LimbsRestTrem'},
+                {'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'},
+                {'off': 'TotalU3', 'on': 'TotalU3'},
+                {'off': 'TremorUPDRS', 'on': 'TremorUPDRS'},
+                {'off': 'Brady14Items', 'on': 'Brady14Items'},
+                {'off': 'LimbsRigidity5Items', 'on': 'LimbsRigidity5Items'},
+                {'off': 'RestTrem', 'on': 'RestTrem'},
+            ],
+            'subplots': [
+                {'groups':['Resistant'], 'visits': ['Baseline', 'Year 1', 'Year 2'], 'sessions': ['off', 'on']},
+                {'groups':['Intermediate'], 'visits': ['Baseline', 'Year 1', 'Year 2'], 'sessions': ['off', 'on']},
+                {'groups':['Responsive'], 'visits': ['Baseline', 'Year 1', 'Year 2'], 'sessions': ['off', 'on']},
+            ],
+            'alignment': 'horizontal'
+        }]
+
+        updrs_conf_drdr = [
+            {'updrs': [
+                {'off': 'OFFU_tot', 'on': 'ONU_tot'},
+                {'off': 'OFFTremorUPDRS', 'on': 'ONTremorUPDRS'},
+                {'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'},
+                {'off': 'AvgBrady14Items', 'on': 'AvgBrady14Items'},
+                {'off': 'AvgLimbsRigidity5Items', 'on': 'AvgLimbsRigidity5Items'},
+                {'off': 'RestTrem', 'on': 'RestTrem'},
+            ],
+            'subplots': [
+                {'groups':['Resistant'], 'visits': ['Baseline'], 'sessions': ['off', 'on']},
+                {'groups':['Intermediate'], 'visits': ['Baseline'], 'sessions': ['off', 'on']},
+                {'groups':['Responsive'], 'visits': ['Baseline'], 'sessions': ['off', 'on']},
+            ],
+            'alignment': 'horizontal'
+            },
+            # {'updrs': [
+            #     {'off': 'OFFU_tot', 'on': 'ONU_tot'},
+            #     {'off': 'OFFTremorUPDRS', 'on': 'ONTremorUPDRS'},
+            #     {'off': 'AvgLimbsRestTrem', 'on': 'AvgLimbsRestTrem'},
+            #     {'off': 'AvgBrady14Items', 'on': 'AvgBrady14Items'},
+            #     {'off': 'AvgLimbsRigidity5Items', 'on': 'AvgLimbsRigidity5Items'},
+            #     {'off': 'RestTrem', 'on': 'RestTrem'},
+            # ],
+            #     'subplots': [
+            #         {'groups': ['Resistant', 'Intermediate', 'Responsive'], 'visits': ['Baseline'], 'sessions': ['off', 'on']},
+            #     ],
+            #     'alignment': 'horizontal'
+            # }
+        ]
+
+        # if process_ppp: objDataHandlingPPP.plot_rainclouds_by_session_and_group(updrs_conf_ppp, "two-steps", model_labels="Labels_Model15_3clustb", model_name="Model15_3clust")
+        # if process_ppp: objDataHandlingPPP.plot_rainclouds_by_session_and_group(updrs_conf_ppp, "two-steps", model_labels="Labels_Model12_3clust", model_name="Model12_3clust")
+        # if process_ppp: objDataHandlingPPP.plot_rainclouds_by_session_and_group(updrs_conf_ppp, "two-steps", model_labels="Labels_Model14_3clustb", model_name="Model14_2clust")
+        # if process_ppp: objDataHandlingPPP.plot_rainclouds_by_session_and_group(updrs_conf_ppp, "two-steps", model_labels="Labels_Model11b", model_name="Model11")
+        if process_ppp: objDataHandlingPPP.plot_rainclouds_by_session_and_group(updrs_conf_ppp, "arbitrary-updrs", image_format="svg")
+
+        # if process_drdr: objDataHandlingDRDR.plot_rainclouds_by_session_and_group(updrs_conf_drdr, "two-steps")
+        if process_drdr: objDataHandlingDRDR.plot_rainclouds_by_session_and_group(updrs_conf_drdr, "arbitrary-updrs", image_format="svg")
+
+    """ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
+    if plot_responsiveness_bars_flag:
+        print(" ----- BAR PLOTS FOR RESPONSIVENESS PER GROUP ----- ")
+        updrs_conf_ppp = [{
+            'updrs': [
+                {'off': 'LimbsRestTrem', 'on': 'LimbsRestTrem'},
+                # {'off': 'ChangeTotalU3', 'on': 'ChangeTotalU3'},
+                # {'off': 'ChangeTremorUPDRS', 'on': 'ChangeTremorUPDRS'},
+                # {'off': 'ChangeLimbsRestTrem', 'on': 'ChangeLimbsRestTrem'},
+                # {'off': 'DifferenceLimbsRestTrem', 'on': 'DifferenceLimbsRestTrem'},
+                # {'off': 'ChangeBrady14Items', 'on': 'ChangeBrady14Items'},
+                # {'off': 'ChangeLimbsRigidity5Items', 'on': 'ChangeLimbsRigidity5Items'},
+                # {'off': 'ResponseRestTrem', 'on': 'ResponseRestTrem'},
+            ],
+            'subplots': [
+                {'groups':['Resistant'], 'visits': ['Baseline', 'Year 1', 'Year 2'], 'sessions': ['off', 'on'], 'merge_sessions': False},
+                {'groups':['Intermediate'], 'visits': ['Baseline', 'Year 1', 'Year 2'], 'sessions': ['off', 'on'], 'merge_sessions': False},
+                {'groups':['Responsive'], 'visits': ['Baseline', 'Year 1', 'Year 2'], 'sessions': ['off', 'on'], 'merge_sessions': False},
+            ],
+            'subplot_divider': 'groups', # or visits
+        }]
+
+        # if process_ppp: objDataHandlingPPP.plot_responsiveness_bars(updrs_conf_ppp, "two-steps", model_labels="Labels_Model15_3clustb", model_name="Model15_3clust")
+        # if process_ppp: objDataHandlingPPP.plot_responsiveness_bars(updrs_conf_ppp, "two-steps", model_labels="Labels_Model12_3clust", model_name="Model12_3clust")
+        # if process_ppp: objDataHandlingPPP.plot_responsiveness_bars(updrs_conf_ppp, "two-steps", model_labels="Labels_Model14_3clustb", model_name="Model14_2clust")
+        # if process_ppp: objDataHandlingPPP.plot_responsiveness_bars(updrs_conf_ppp, "two-steps", model_labels="Labels_Model11b", model_name="Model11")
+        if process_ppp: objDataHandlingPPP.plot_responsiveness_bars(updrs_conf_ppp, "arbitrary-updrs")
+
+    """ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% """
+    if plot_averaged_histograms_flag:
+        print(" ----- PLOT AVERAGED HISTOGRAMS ----- ")
+        updrs_conf_ppp = {
+            'updrs': [
+                {'off': 'ChangeTotalU3', 'on': 'ChangeTotalU3'},
+                {'off': 'ChangeTremorUPDRS', 'on': 'ChangeTremorUPDRS'},
+                {'off': 'ChangeLimbsRestTrem', 'on': 'ChangeLimbsRestTrem'},
+                {'off': 'ChangeBrady14Items', 'on': 'ChangeBrady14Items'},
+                {'off': 'ChangeLimbsRigidity5Items', 'on': 'ChangeLimbsRigidity5Items'},
+            ],
+            'subplots': [
+                {'groups': ['Resistant', 'Intermediate', 'Responsive'], 'visits': ['Baseline', 'Year 1', 'Year 2'], 'sessions': ['off']},
+                # {'groups': ['Resistant'], 'visits': ['Baseline', 'Year 1', 'Year 2'], 'sessions': ['off', 'on']},
+                # {'groups': ['Intermediate'], 'visits': ['Baseline', 'Year 1', 'Year 2'], 'sessions': ['off', 'on']},
+                # {'groups': ['Responsive'], 'visits': ['Baseline', 'Year 1', 'Year 2'], 'sessions': ['off', 'on']},
+            ],
+            'subplot_divider': 'groups',  # or visits
+            'plot_operations': [{'sessions': objDataHandlingPPP.percentage_change_basic}, {'visits': 'mean'}]
+        }
+
+        if process_ppp: objDataHandlingPPP.averaged_histograms(updrs_conf_ppp, "arbitrary-updrs")
 
     sys.exit()

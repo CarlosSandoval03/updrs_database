@@ -11,7 +11,7 @@ from utilitiespkg import SearchDirectories
 
 def extract_participants_list(file_path):
     df = pd.read_excel(file_path)
-    participants = df["Subject"]
+    participants = df["Are_in_166_but_not_in_139"] # Are_in_166_but_not_in_139 or Subject
 
     return participants
 
@@ -23,21 +23,29 @@ if __name__ == "__main__":
     base_PPP_folder = "/project/3024023.01/PPP-POM_cohort/"
     path_to_my_bids = os.path.join(base_PPP_folder, "bids")
     path_to_ppp_bids = "/project/3022026.01/pep/bids/"
-    path_to_participants_list = os.path.join(base_PPP_folder, "bids", "subjects_handedness.xlsx")
-    path_to_participants_list_tremor = os.path.join(base_PPP_folder, "PPP_cohort_participants-with-tremor-list.xlsx")
-
-    if run_local: print("----- LOADING LIST OF PARTICIPANTS WITH TREMOR DURING SCANS -----")
-    participants = extract_participants_list(path_to_participants_list)
-    participants_tremor = extract_participants_list(path_to_participants_list_tremor)
-
-    # participants_to_include = participants
-    participants_to_include = pd.Series(list(set(participants_tremor) | set(participants)))
-
-    session_names = ["ses-POMVisit1", "ses-POMVisit2", "ses-POMVisit3"]
-    sub_folders = ["anat", "func"]
-    name_pattern = ["_acq-MPRAGE_run-1_T1w", "_task-rest_acq-MB8_run-1_echo-1_bold"]
+    path_to_participants_list = os.path.join(base_PPP_folder, "updrs_analysis", "ppp_updrs_trem-filtered_database_of_predictors.xlsx")
+    path_to_participants_list_tremor = os.path.join(base_PPP_folder, "PPP_cohort_participants-lists.xlsx")
 
     searchObj = SearchDirectories()
+
+    if run_local: print("----- LOADING LIST OF PARTICIPANTS WITH TREMOR DURING SCANS -----")
+    # participants = extract_participants_list(path_to_participants_list)
+    participants_tremor = searchObj.extract_participants_list(path_to_participants_list_tremor, "Remaining_9_to_get_139")
+    participants_tremor = participants_tremor[participants_tremor.notnull()].reset_index(drop=True)
+
+
+    # participants_to_include = participants
+    # union_set = set(participants_tremor) | set(participants)
+    # diff_set = set(participants_tremor) - set(participants)
+    # participants_to_include = pd.Series(list(diff_set)) #union_set
+
+    participants_to_include = participants_tremor
+
+    session_names = ["ses-POMVisit1", "ses-POMVisit2", "ses-POMVisit3"]
+    # sub_folders = ["anat", "func"]
+    sub_folders = ["eeg"]
+    # name_pattern = ["_acq-MPRAGE_run-1_T1w", "_task-rest_acq-MB8_run-1_echo-1_bold"]
+    name_pattern = ["_task-rest_eeg"]
 
     # For creating a summary of existance of data
     summary_sessions = pd.DataFrame()
@@ -60,10 +68,11 @@ if __name__ == "__main__":
                     files_dirs = searchObj.search_name_pattern(full_path, pattern)
 
                     # assert len(files_dirs) != 2; f"{len(files_dirs)} files found for {participant}-{session}-{folder}. Only 2 should be found."
-                    if len(files_dirs) != 2:
+                    if len(files_dirs) != 4:
                         print(f"{len(files_dirs)} files found for {participant}-{session}-{folder}. Only 2 should be found.")
                     else:
-                        root_path_new = os.path.join(path_to_my_bids, participant, session, folder)
+                        # root_path_new = os.path.join(path_to_my_bids, participant, session, folder)
+                        root_path_new = "/project/3024023.01/PPP-POM_cohort/EMG/rest/"
                         for orig_file in files_dirs:
                             _, name_of_file = os.path.split(orig_file)
                             out_dir = os.path.join(root_path_new, name_of_file)
